@@ -1,0 +1,32 @@
+{% extends 'base_agents.html' %}
+{% block content %}
+<h2>Agent details</h2>
+<table>
+    <tr>
+        <th>Symbol:</th>
+        <td>{{ agent.symbol }}</td>
+    </tr>
+    <tr>
+        <th>Headquarters:</th>
+        <td>
+            <a href="{% url 'systems:waypoint_detail' system_symbol=agent.headquarters.system.symbol pk=agent.headquarters.pk %}">{{ agent.headquarters.symbol }}</a> - {{ agent.headquarters.waypoint_type }}
+        </td>
+    </tr>
+    <tr>
+        <th>Credit:</th>
+        <td>{{ agent.credit }}</td>
+    </tr>
+    <tr>
+        <th>Starting faction:</th>
+        <td>{{ agent.starting_faction.name }}</td>
+    </tr>
+    <tr>
+        <th>Ship count:</th>
+        <td>{{ agent.ship_count }}</td>
+    </tr>
+    <tr>
+        <th>Account ID:</th>
+        <td>{{ agent.account_id }}</td>
+    </tr>
+</table>
+{% endblock %}

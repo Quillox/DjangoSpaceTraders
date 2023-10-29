@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}Space Traders{% endblock %}</title>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+</head>
+
+<body>
+    <header>
+        <nav>
+            <ul>
+                <li><a href="{% url 'agents:index' %}">Agents</a></li>
+                <li><a href="{% url 'contracts:index' %}">Contracts</a></li>
+                <li><a href="{% url 'factions:index' %}">Factions</a></li>
+                <li><a href="{% url 'fleet:index' %}">Fleet</a></li>
+                <li><a href="{% url 'systems:index' %}">Systems</a></li>
+                {% if user.is_authenticated %}
+                <li style="float:right"><a href="{% url 'logout' %}">Logout</a></li>
+                {% else %}
+                <li style="float:right"><a href="{% url 'login' %}">Login</a></li>
+                {% endif %}
+            </ul>
+        </nav>
+    </header>
+    <div class="container">
+        {% block sidebar %}
+        {% endblock %}
+        <main>
+            {% block content %}
+            <h1>Welcome to Space Traders</h1>
+            <p>Space Traders is an open-universe game and learning platform that offers a set of HTTP endpoints to
+                control a fleet of ships and explore a multiplayer universe.</p>
+            <p>The goal of the game is to manage a fleet of ships as you explore the universe and try to turn a profit.
+                You can trade goods across systems, mine asteroids for valuable ores, or take on faction contracts to
+                earn credits and reputation.</p>
+            <p>All players operate in the same universe, so you can compete with others to earn the most credits or
+                chart the most systems. The game is currently in alpha, and we plan to add player-vs-player combat,
+                bounty hunting, and more.</p>
+            {% endblock %}
+        </main>
+    </div>
+</body>
+
+</html>

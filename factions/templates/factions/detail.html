@@ -1,0 +1,42 @@
+{% extends 'base_factions.html' %}
+
+{% block content %}
+<h2>Faction details</h2>
+<table>
+    <tr>
+        <th>Symbol:</th>
+        <td>{{ faction.symbol }}</td>
+    </tr>
+    <tr>
+        <th>Name:</th>
+        <td>{{ faction.name }}</td>
+    </tr>
+    <tr>
+        <th>Description:</th>
+        <td>{{ faction.description }}</td>
+    </tr>
+    <tr>
+        <th>Headquarters:</th>
+        {% if faction.headquarters is None %}
+        <td>None</td>
+        {% else %}
+        <td><a href="{% url 'systems:detail' faction.headquarters.symbol %}">{{ faction.headquarters.symbol }}</a> -
+            {{ faction.headquarters.system_type }}</td>
+        {% endif %}
+    </tr>
+    <tr>
+        <th>Is recruiting:</th>
+        <td>{{ faction.is_recruiting }}</td>
+    </tr>
+    <tr>
+        <th>Traits:</th>
+        <td>
+            <ul>
+                {% for trait in faction.traits.all %}
+                <li>{{ trait.name }} - {{ trait.description }}</li>
+                {% endfor %}
+            </ul>
+        </td>
+    </tr>
+</table>
+{% endblock %}

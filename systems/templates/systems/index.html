@@ -1,0 +1,14 @@
+{% extends 'base_systems.html' %}
+
+{% block content %}
+<h1>Systems</h1>
+{% if system_list %}
+<ul>
+{% for system in system_list %}
+<li><a href="{% url 'systems:detail' system.pk %}">{{ system }}</a></li>
+{% endfor %}
+</ul>
+{% else %}
+<p>No systems are available.</p>
+{% endif %}
+{% endblock %}

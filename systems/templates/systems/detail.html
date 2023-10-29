@@ -1,0 +1,48 @@
+{% extends 'base_systems.html' %}
+
+{% block content %}
+<h2>System details</h2>
+<table>
+    <tr>
+        <th>Symbol:</th>
+        <td>{{ system.symbol }}</td>
+    </tr>
+    <tr>
+        <th>Sector symbol:</th>
+        <td>{{ system.sector_symbol }}</td>
+    </tr>
+    <tr>
+        <th>System type:</th>
+        <td>{{ system.system_type }}</td>
+    </tr>
+    <tr>
+        <th>X:</th>
+        <td>{{ system.x }}</td>
+    </tr>
+    <tr>
+        <th>Y:</th>
+        <td>{{ system.y }}</td>
+    </tr>
+    <tr>
+        <th>Factions:</th>
+        <td>
+            <ul>
+                {% for faction in system.factions.all %}
+                <li><a href="{% url 'factions:detail' faction.symbol %}">{{ faction.symbol }}</a> - {{ faction.name }}
+                </li>
+                {% endfor %}
+            </ul>
+        </td>
+    </tr>
+    <tr>
+        <th>Waypoints:</th>
+        <td>
+            <ul>
+                {% for waypoint in system.waypoints.all %}
+                <li><a href="{% url 'systems:waypoint_detail' system_symbol=system.symbol pk=waypoint.pk %}">{{ waypoint.symbol }}</a> - {{ waypoint.waypoint_type }}</li>
+                {% endfor %}
+            </ul>
+        </td>
+    </tr>
+</table>
+{% endblock %}

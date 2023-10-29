@@ -1,0 +1,25 @@
+{% extends 'base_agents.html' %}
+
+{% block title %}Home{% endblock %}
+
+
+{% block content %}
+
+{% if user.is_authenticated %}
+<h1>Welcome, {{ user.username }}!</h1>
+<p>You are logged in.</p>
+{% else %}
+<h1>Welcome to my SpaceTraders client</h1>
+<p>Please <a href="{% url 'login' %}">log in</a> if you want to play the game. Otherwise you can just browse.</p>
+{% endif %}
+
+<h2>Messages</h2>
+{% if messages %}
+<ul class="messages">
+    {% for message in messages %}
+    <li{% if message.tags %} class="{{ message.tags }}" {% endif %}>{{ message }}</li>
+    {% endfor %}
+</ul>
+{% endif %}
+
+{% endblock %}

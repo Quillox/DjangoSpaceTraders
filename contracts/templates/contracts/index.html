@@ -1,0 +1,14 @@
+{% extends 'base_contracts.html' %}
+
+{% block content %}
+<h1>Contracts</h1>
+{% if contract_list %}
+<ul>
+{% for contract in contract_list %}
+<li><a href="{% url 'contracts:detail' contract.pk %}">{{ contract.name }}</a></li>
+{% endfor %}
+</ul>
+{% else %}
+<p>No contracts are available.</p>
+{% endif %}
+{% endblock %}

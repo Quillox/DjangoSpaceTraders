@@ -1,0 +1,72 @@
+{% extends 'base_agents.html' %}
+
+{% block content %}
+{% if user.is_authenticated %}
+<h1>Welcome, {{ user.username }}. Thanks for logging in.</h1>
+<h2>Register new or add existing SpaceTraders agent</h2>
+<form method="post" id="agent-form">
+    {% csrf_token %}
+    <label for="agent_symbol">Agent Symbol:</label>
+    <input type="text" id="agent_symbol" name="agent_symbol">
+    <br>
+    <label for="starting_faction">Starting Faction:</label>
+    <select id="starting_faction" name="starting_faction">
+        <option value="COSMIC">COSMIC</option>
+        <option value="VOID">VOID</option>
+        <option value="GALACTIC">GALACTIC</option>
+        <option value="QUANTUM">QUANTUM</option>
+        <option value="DOMINION">DOMINION</option>
+        <option value="ASTRO">ASTRO</option>
+        <option value="CORSAIRS">CORSAIRS</option>
+        <option value="OBSIDIAN">OBSIDIAN</option>
+        <option value="AEGIS">AEGIS</option>
+        <option value="UNITED">UNITED</option>
+        <option value="SOLITARY">SOLITARY</option>
+        <option value="COBALT">COBALT</option>
+        <option value="OMEGA">OMEGA</option>
+        <option value="ECHO">ECHO</option>
+        <option value="LORDS">LORDS</option>
+        <option value="CULT">CULT</option>
+        <option value="ANCIENTS">ANCIENTS</option>
+        <option value="SHADOW">SHADOW</option>
+        <option value="ETHEREAL">ETHEREAL</option>
+    </select>
+    <br>
+    <input type="submit" name="register_agent" value="Register new agent" onclick="validateRegister()">
+    <br>
+    <label for="token">Authorization Token:</label>
+    <input type="text" id="token" name="token">
+    <br>
+    <input type="submit" name="add_agent" value="Add existing agent" onclick="validateAdd()">
+</form>
+
+{% if messages %}
+<ul class="messages">
+  {% for message in messages %}
+  <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+  {% endfor %}
+</ul>
+{% endif %}
+
+<script>
+    function validateRegister() {
+        document.getElementById("agent_symbol").required = true;
+        document.getElementById("starting_faction").required = true;
+        document.getElementById("token").required = false;
+    }
+
+    function validateAdd() {
+        document.getElementById("agent_symbol").required = false;
+        document.getElementById("starting_faction").required = false;
+        document.getElementById("token").required = true;
+    }
+</script>
+{% else %}
+<h1>Please log in to register or add a SpaceTraders agent</h1>
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <input type="submit" value="Log in">
+</form>
+{% endif %}
+{% endblock %}

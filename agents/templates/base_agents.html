@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+
+{% block title %}Agents{% endblock %}
+
+{% block sidebar %}
+<aside>
+    <ul>
+        <li><a href="{% url 'agents:detail' user.agent.symbol %}">My Agent</a></li>
+        <li><a href="{% url 'agents:index' %}">Agents</a></li>
+    </ul>
+</aside>
+{% endblock %}

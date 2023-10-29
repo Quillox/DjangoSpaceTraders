@@ -1,0 +1,20 @@
+{% extends 'base_agents.html' %}
+
+{% block content %}
+<h1>Enter SpaceTraders API Token</h1>
+<form method="post">
+    {% csrf_token %}
+    <label for="token">Token:</label>
+    <input type="text" id="token" name="token">
+    <button type="submit">Save</button>
+</form>
+
+{% if messages %}
+<ul class="messages">
+    {% for message in messages %}
+    <li{% if message.tags %} class="{{ message.tags }}" {% endif %}>{{ message }}</li>
+    {% endfor %}
+</ul>
+{% endif %}
+
+{% endblock %}
