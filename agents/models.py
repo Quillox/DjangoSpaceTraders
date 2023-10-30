@@ -57,12 +57,12 @@ class Agent(models.Model):
         return f'Agent {self.symbol} with {self.credit} credits.'
 
     @classmethod
-    def add(cls, agent_data):
+    def add(cls, agent_data, waypoint, faction):
         agent, created = cls.objects.update_or_create(
             symbol=agent_data['symbol'],
-            headquarters=Waypoint.objects.filter(symbol=agent_data['headquarters']).first(),
+            headquarters=waypoint,
             credit=agent_data['credits'],
-            starting_faction=Faction.objects.filter(symbol=agent_data['startingFaction']).first(),
+            starting_faction=faction,
             ship_count=agent_data.get('shipCount'),
             account_id=agent_data.get('accountId')
         )

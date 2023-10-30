@@ -2,7 +2,6 @@ from django.db import models
 from django.core.validators import MinValueValidator
 
 from factions.models import Faction
-from fleet.models import Ship
 
 SYSTEM_TYPE = [
     ('NEUTRON_STAR', 'Neutron Star'),
@@ -114,6 +113,12 @@ MARKET_SUPPLY = [
     ('LIMITED', 'Limited'),
     ('MODERATE', 'Moderate'),
     ('ABUNDANT', 'Abundant')
+]
+
+MARKET_ACTIVITY = [
+    ('WEAK', 'Weak'),
+    ('GROWING', 'Growing'),
+    ('STRONG', 'Strong')
 ]
 
 TRADE_GOOD_SYMBOLS = [
@@ -262,6 +267,7 @@ class TradeGood(models.Model):
         max_length=5000
     )
 
+
     @classmethod
     def add(cls, trade_good_data):
         trade_good, created = cls.objects.update_or_create(
@@ -337,6 +343,7 @@ class SystemFactionLink(models.Model):
 
 
 class Waypoint(models.Model):
+    # TODO if the waypoint is a jump gate, then show this in the `waypoint_detail.html` template.
     symbol = models.CharField(
         primary_key=True,
         max_length=500
@@ -466,6 +473,7 @@ class WaypointTraitLink(models.Model):
         Waypoint,
         on_delete=models.CASCADE,
     )
+    # TODO rename to trait
     waypoint_trait = models.ForeignKey(
         WaypointTrait,
         on_delete=models.CASCADE,
@@ -728,11 +736,11 @@ class MarketTransaction(models.Model):
     )
 
     @classmethod
-    def add(cls, transactions_data):
+    def add(cls, transactions_data, market, ship, trade_good):
         market_transaction, created = cls.objects.update_or_create(
-            market=Waypoint.objects.get(symbol=transactions_data['waypointSymbol']),
-            ship_symbol=Ship.objects.get(symbol=transactions_data['shipSymbol']),
-            trade_good=TradeGood.objects.get(symbol=transactions_data['tradeSymbol']),
+            market=market,
+            ship_symbol=ship,
+            trade_good=trade_good,
             transaction_type=transactions_data['type'],
             units=transactions_data['units'],
             price_per_unit=transactions_data['pricePerUnit'],

@@ -115,9 +115,6 @@ class Faction(models.Model):
         if self.headquarters is None:
             return "faction is not finished initializing yet"
         return f'{self.name}, headquarters at {self.headquarters.symbol}. They are{" not " if self.is_recruiting is False else " "}recruiting.'
-    
-    def __repr__(self) -> str:
-        return self.__str__()
 
     @classmethod
     def add_faction_no_waypoint(cls, faction_data):

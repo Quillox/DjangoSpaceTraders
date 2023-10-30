@@ -1,5 +1,8 @@
+from typing import List
 from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
+
+from systems.models import TradeGood, MARKET_SUPPLY, MARKET_ACTIVITY
 
 
 SHIP_ROLE = [
@@ -166,13 +169,11 @@ class ShipRegistration(models.Model):
     )
 
     @classmethod
-    def add(cls, name, faction, ship_role):
-        # TODO think if i need to add all of these `add` methods.
-        # Maybe I could just use `update_or_create(*data)` in the api.py
+    def add(cls, ship_registration_data, agent, faction):
         registration, created = cls.objects.update_or_create(
-            name=name,
+            name=agent,
             faction_symbol=faction,
-            ship_role=ship_role
+            ship_role=ship_registration_data['role']
         )
         return registration
 
@@ -182,9 +183,10 @@ class ShipNav(models.Model):
         'systems.System',
         on_delete=models.CASCADE,
     )
-    current_waypoint = models.ForeignKey(
+    waypoint = models.ForeignKey(
         'systems.Waypoint',
         on_delete=models.CASCADE,
+        verbose_name="The waypoint symbol of the ship's current location, or if the ship is in-transit, the waypoint symbol of the ship's destination."
     )
     route = models.ForeignKey(
         'ShipNavRoute',
@@ -200,19 +202,30 @@ class ShipNav(models.Model):
         default='CRUISE'
     )
 
+    @classmethod
+    def add(cls, ship_nav_data, system, waypoint, route):
+        ship_nav, created = cls.objects.update_or_create(
+            current_system_symbol=system,
+            waypoint=waypoint,
+            route=route,
+            status=ship_nav_data['status'],
+            flight_mode=ship_nav_data['flightMode']
+        )
+        return ship_nav
+
 
 class ShipNavRoute(models.Model):
-    destination_waypoint_symbol = models.ForeignKey(
+    destination = models.ForeignKey(
         'systems.Waypoint',
         on_delete=models.CASCADE,
         related_name='nav_destination'
     )
-    departure_waypoint_symbol = models.ForeignKey(
-        'systems.Waypoint',
-        on_delete=models.CASCADE,
-        verbose_name='Depreciated, use origin',
-        related_name='nav_departure'
-    )
+    # departure_waypoint = models.ForeignKey(
+    #     'systems.Waypoint',
+    #     on_delete=models.CASCADE,
+    #     verbose_name='Depreciated, use origin',
+    #     related_name='nav_departure'
+    # )
     origin = models.ForeignKey(
         'systems.Waypoint',
         on_delete=models.CASCADE,
@@ -222,6 +235,16 @@ class ShipNavRoute(models.Model):
     arrival_time = models.DateTimeField(
         verbose_name="the date time of the ship's arrival. If the ship is in-transit, this is the expected time of arrival."
     )
+
+    @classmethod
+    def add(cls, ship_nav_route_data, destination, origin):
+        ship_nav_route, created = cls.objects.update_or_create(
+            destination=destination,
+            origin=origin,
+            departure_time=ship_nav_route_data['departureTime'],
+            arrival_time=ship_nav_route_data['arrival']
+        )
+        return ship_nav_route
 
 
 class ShipCrew(models.Model):
@@ -250,8 +273,20 @@ class ShipCrew(models.Model):
         validators=[MinValueValidator(0)]
     )
 
+    @classmethod
+    def add(cls, ship_crew_data):
+        ship_crew, created = cls.objects.update_or_create(
+            current=ship_crew_data['current'],
+            required=ship_crew_data['required'],
+            capacity=ship_crew_data['capacity'],
+            rotation=ship_crew_data['rotation'],
+            morale=ship_crew_data['morale'],
+            wages=ship_crew_data['wages']
+        )
+        return ship_crew
 
-class InstallationRequirements(models.Model):
+
+class ShipComponent(TradeGood):
     power = models.IntegerField(
         verbose_name="the amount of power required from the reactor."
     )
@@ -262,34 +297,11 @@ class InstallationRequirements(models.Model):
         verbose_name="the number of module slots required for installation."
     )
 
-
-class ShipComponent(models.Model):
-    symbol = models.CharField(
-        primary_key=True,
-        max_length=500,
-        choices=SHIP_COMPONENT_SYMBOL
-    )
-    # TODO These 2 might be blank=True, null=True
-    name = models.CharField(
-        max_length=500
-    )
-    description = models.CharField(
-        max_length=5000
-    )
-    requirements = models.ForeignKey(
-        InstallationRequirements,
-        on_delete=models.CASCADE,
-    )
+    class Meta:
+        abstract = True
 
 
-class Frame(models.Model):
-    symbol = models.ForeignKey(
-        ShipComponent,
-        on_delete=models.CASCADE,
-        related_name='frames',
-        # limit_choices_to={'symbol__startswith': 'FRAME_'}
-        choices=SHIP_FRAME_SYMBOL
-    )
+class Frame(ShipComponent):
     condition = models.IntegerField(
         validators=[MinValueValidator(0), MaxValueValidator(100)],
         verbose_name="Condition is a range of 0 to 100 where 0 is completely worn out and 100 is brand new."
@@ -298,7 +310,7 @@ class Frame(models.Model):
         verbose_name='the amount of slots that can be dedicated to modules installed in the ship. Each installed module take up a number of slots, and once there are no more slots, no new modules can be installed.',
         validators=[MinValueValidator(0)]
     )
-    mountingPoints = models.IntegerField(
+    mounting_points = models.IntegerField(
         verbose_name='the amount of slots that can be dedicated to mounts installed in the ship. Each installed mount takes up a number of points, and once there are no more points remaining, no new mounts can be installed.',
         validators=[MinValueValidator(0)]
     )
@@ -307,14 +319,24 @@ class Frame(models.Model):
         validators=[MinValueValidator(0)]
     )
 
+    @classmethod
+    def add(cls, frame_data):
+        frame, created = cls.objects.update_or_create(
+            symbol=frame_data['symbol'],
+            name=frame_data['name'],
+            description=frame_data['description'],
+            condition=frame_data['condition'],
+            module_slots=frame_data['moduleSlots'],
+            mounting_points=frame_data['mountingPoints'],
+            fuelCapacity=frame_data['fuelCapacity'],
+            power=frame_data['requirements']['power'],
+            crew=frame_data['requirements']['crew'],
+            slots=frame_data['requirements']['slots']
+        )
+        return frame
 
-class Reactor(models.Model):
-    symbol = models.ForeignKey(
-        ShipComponent,
-        on_delete=models.CASCADE,
-        related_name='reactors',
-        choices=SHIP_REACTOR_SYMBOL
-    )
+
+class Reactor(ShipComponent):
     condition = models.IntegerField(
         validators=[MinValueValidator(0), MaxValueValidator(100)],
         verbose_name='condition is a range of 0 to 100 where 0 is completely worn out and 100 is brand new.'
@@ -324,14 +346,22 @@ class Reactor(models.Model):
         validators=[MinValueValidator(1)]
     )
 
+    @classmethod
+    def add(cls, reactor_data):
+        reactor, created = cls.objects.update_or_create(
+            symbol=reactor_data['symbol'],
+            name=reactor_data['name'],
+            description=reactor_data['description'],
+            condition=reactor_data['condition'],
+            power_output=reactor_data['powerOutput'],
+            power=reactor_data['requirements']['power'],
+            crew=reactor_data['requirements']['crew'],
+            slots=reactor_data['requirements']['slots']
+        )
+        return reactor
 
-class Engine(models.Model):
-    symbol = models.ForeignKey(
-        ShipComponent,
-        on_delete=models.CASCADE,
-        related_name='engines',
-        choices=SHIP_ENGINE_SYMBOL
-    )
+
+class Engine(ShipComponent):
     condition = models.IntegerField(
         validators=[MinValueValidator(0), MaxValueValidator(100)],
         verbose_name='condition is a range of 0 to 100 where 0 is completely worn out and 100 is brand new.'
@@ -341,14 +371,21 @@ class Engine(models.Model):
         validators=[MinValueValidator(1)]
     )
 
+    @classmethod
+    def add(cls, engine_data):
+        engine, created = cls.objects.update_or_create(
+            symbol=engine_data['symbol'],
+            name=engine_data['name'],
+            description=engine_data['description'],
+            condition=engine_data['condition'],
+            speed=engine_data['speed'],
+            power=engine_data['requirements']['power'],
+            crew=engine_data['requirements']['crew'],
+            slots=engine_data['requirements']['slots']
+        )
+        return engine
 
-class Module(models.Model):
-    symbol = models.ForeignKey(
-        ShipComponent,
-        on_delete=models.CASCADE,
-        related_name='modules',
-        choices=SHIP_MODULE_SYMBOL
-    )
+class Module(ShipComponent):
     capacity = models.IntegerField(
         verbose_name='modules that provide capacity, such as cargo hold or crew quarters will show this value to denote how much of a bonus the module grants.',
         validators=[MinValueValidator(0)],
@@ -362,14 +399,22 @@ class Module(models.Model):
         null=True
     )
 
+    @classmethod
+    def add(cls, module_data):
+        module, created = cls.objects.update_or_create(
+            symbol=module_data['symbol'],
+            name=module_data['name'],
+            description=module_data['description'],
+            capacity=module_data['capacity'],
+            sensor_range=module_data['sensorRange'],
+            power=module_data['requirements']['power'],
+            crew=module_data['requirements']['crew'],
+            slots=module_data['requirements']['slots']
+        )
+        return module
 
-class Mount(models.Model):
-    symbol = models.ForeignKey(
-        ShipComponent,
-        on_delete=models.CASCADE,
-        related_name='mounts',
-        choices=SHIP_MOUNT_SYMBOL
-    )
+
+class Mount(ShipComponent):
     strength = models.IntegerField(
         verbose_name="mounts that have this value, such as mining lasers, denote how powerful this mount's capabilities are.",
         validators=[MinValueValidator(0)]
@@ -377,58 +422,68 @@ class Mount(models.Model):
     deposits = models.ManyToManyField(
          'systems.TradeGood',
         through='MountDepositLink',
-        related_name='mounts'
+        related_name='mounts',
+        choices=SHIP_MOUNT_DEPOSIT_SYMBOL
     )
 
+    @classmethod
+    def add(cls, mount_data, deposits: list):
+        mount, created = cls.objects.update_or_create(
+            symbol=mount_data['symbol'],
+            name=mount_data['name'],
+            description=mount_data['description'],
+            strength=mount_data['strength'],
+            power=mount_data['requirements']['power'],
+            crew=mount_data['requirements']['crew'],
+            slots=mount_data['requirements']['slots']
+        )
+
+        for deposit in deposits:
+            MountDepositLink.add(mount, deposit)
+
+        return mount
 
 
 class MountDepositLink(models.Model):
     mount = models.ForeignKey(
         Mount,
         on_delete=models.CASCADE,
+        related_name='deposits_link'
     )
     trade_good = models.ForeignKey(
          'systems.TradeGood',
         on_delete=models.CASCADE,
+        related_name='deposited_by_link'
     )
 
-
-class Cooldown(models.Model):
-    total_seconds = models.IntegerField(
-        verbose_name='the total duration of the cooldown in seconds.',
-        validators=[MinValueValidator(0)]
-    )
-    remaining_seconds = models.IntegerField(
-        verbose_name='the remaining duration of the cooldown in seconds',
-        validators=[MinValueValidator(0)]
-    )
-    expiration = models.DateTimeField(
-        verbose_name='the date and time when the cooldown expires in ISO 8601 format.',
-        blank=True,
-        null=True
-    )
+    @classmethod
+    def add(cls, mount, deposit):
+        mount_deposit_link, created = cls.objects.update_or_create(
+            mount=mount,
+            trade_good=deposit
+        )
+        return mount_deposit_link
 
 
 class Ship(models.Model):
     agent = models.ForeignKey(
          'agents.Agent',
-        on_delete=models.CASCADE,
+        on_delete=models.CASCADE
     )
     # [AGENT_SYMBOL]-[HEX_ID]
     symbol = models.CharField(
         primary_key=True,
         max_length=500,
     )
-    # TODO use a OneToOneField?
-    registration = models.ForeignKey(
+    registration = models.OneToOneField(
         ShipRegistration,
         on_delete=models.CASCADE,
     )
-    nav = models.ForeignKey(
+    nav = models.OneToOneField(
         ShipNav,
         on_delete=models.CASCADE,
     )
-    crew = models.ForeignKey(
+    crew = models.OneToOneField(
         ShipCrew,
         on_delete=models.CASCADE,
     )
@@ -442,10 +497,6 @@ class Ship(models.Model):
     )
     engine = models.ForeignKey(
         Engine,
-        on_delete=models.CASCADE,
-    )
-    cooldown = models.ForeignKey(
-        Cooldown,
         on_delete=models.CASCADE,
     )
     modules = models.ManyToManyField(
@@ -466,11 +517,6 @@ class Ship(models.Model):
         verbose_name="the number of items currently stored in the cargo hold.",
         validators=[MinValueValidator(0)]
     )
-    # TODO I think I don't need this field as ShipCargoInventory has a foreign key to Ship
-    # cargo_inventory = models.ForeignKey(
-    #     ShipCargoInventory,
-    #     on_delete=models.CASCADE,
-    # )
     fuel_current = models.IntegerField(
         verbose_name="the current amount of fuel in the ship's tanks.",
         validators=[MinValueValidator(0)]
@@ -478,14 +524,62 @@ class Ship(models.Model):
     fuel_capacity = models.IntegerField(
         validators=[MinValueValidator(0)]
     )
-    # TODO do I need this field?
-    # fuel_consumed_log = models.ForeignKey(
-    #     FuelConsumedLog,
-    #     on_delete=models.CASCADE,
-    #     blank=True,
-    #     null=True
-    # )
 
+    @classmethod
+    def add(cls, ship_data, agent, registration, nav, crew, frame, reactor, engine, modules: List[Module], mounts: List[Mount]):
+        ship, created = cls.objects.update_or_create(
+            agent=agent,
+            symbol=ship_data['symbol'],
+            registration=registration,
+            nav=nav,
+            crew=crew,
+            frame=frame,
+            reactor=reactor,
+            engine=engine,
+            cargo_capacity=ship_data['cargo']['capacity'],
+            cargo_units=ship_data['cargo']['units'],
+            fuel_current=ship_data['fuel']['current'],
+            fuel_capacity=ship_data['fuel']['capacity']
+        )
+
+        # TODO look into `bulk_create`
+        for module in modules:
+            ShipModuleLink.add(ship, module)
+
+        for mount in mounts:
+            ShipMountLink.add(ship, mount)
+
+        return ship
+
+
+class Cooldown(models.Model):
+    ship_symbol = models.ForeignKey(
+        Ship,
+        on_delete=models.CASCADE,
+    )
+    total_seconds = models.IntegerField(
+        verbose_name='the total duration of the cooldown in seconds.',
+        validators=[MinValueValidator(0)]
+    )
+    remaining_seconds = models.IntegerField(
+        verbose_name='the remaining duration of the cooldown in seconds',
+        validators=[MinValueValidator(0)]
+    )
+    expiration = models.DateTimeField(
+        verbose_name='the date and time when the cooldown expires in ISO 8601 format.',
+        blank=True,
+        null=True
+    )
+
+    @classmethod
+    def add(cls, cooldown_data, ship):
+        cooldown, created = cls.objects.update_or_create(
+            ship_symbol=ship,
+            total_seconds=cooldown_data['totalSeconds'],
+            remaining_seconds=cooldown_data['remainingSeconds'],
+            expiration=cooldown_data['expiration']
+        )
+        return cooldown
 
 class ShipCargoInventory(models.Model):
     ship_symbol = models.ForeignKey(
@@ -493,12 +587,27 @@ class ShipCargoInventory(models.Model):
         on_delete=models.CASCADE,
     )
     trade_good = models.ForeignKey(
-         'systems.TradeGood',
+         TradeGood,
         on_delete=models.CASCADE,
     )
     units = models.IntegerField(
         validators=[MinValueValidator(1)]
     )
+
+    # TODO might change this so that it adds the trade_goods to the database inside the method, as we get all the data from the API
+    @classmethod
+    def add(cls, inventory_data, ship):
+        ship_cargo_inventory = []
+        for trade_good_data in inventory_data:
+            ship_cargo_inventory.append(
+                cls.objects.update_or_create(
+                    ship_symbol=ship,
+                    trade_good=TradeGood.add(trade_good_data),
+                    units=trade_good_data['units']
+                )
+            )
+        return ship_cargo_inventory
+
 
 
 class FuelConsumedLog(models.Model):
@@ -514,9 +623,18 @@ class FuelConsumedLog(models.Model):
         verbose_name='the time at which the fuel was consumed.'
     )
 
+    @classmethod
+    def add(cls, fuel_consumed_log_data, ship):
+        fuel_consumed_log, created = cls.objects.update_or_create(
+            ship_symbol=ship,
+            amount=fuel_consumed_log_data['amount'],
+            timestamp=fuel_consumed_log_data['timestamp']
+        )
+        return fuel_consumed_log
+
 
 class ShipModuleLink(models.Model):
-    ship_symbol = models.ForeignKey(
+    ship = models.ForeignKey(
         Ship,
         on_delete=models.CASCADE,
     )
@@ -526,9 +644,17 @@ class ShipModuleLink(models.Model):
         choices=SHIP_MODULE_SYMBOL
     )
 
+    @classmethod
+    def add(cls, ship, module):
+        ship_module_link, created = cls.objects.update_or_create(
+            ship=ship,
+            module=module
+        )
+        return ship_module_link
+
 
 class ShipMountLink(models.Model):
-    ship_symbol = models.ForeignKey(
+    ship = models.ForeignKey(
         Ship,
         on_delete=models.CASCADE,
     )
@@ -537,6 +663,14 @@ class ShipMountLink(models.Model):
         on_delete=models.CASCADE,
         choices=SHIP_MOUNT_SYMBOL
     )
+
+    @classmethod
+    def add(cls, ship, mount):
+        ship_mount_link, created = cls.objects.update_or_create(
+            ship=ship,
+            mount=mount
+        )
+        return ship_mount_link
 
 
 # TODO make an abstract base class for ShipyardShip and Ship
@@ -552,7 +686,6 @@ class ShipyardShip(models.Model):
     description = models.CharField(
         max_length=5000
     )
-    purchase_price = models.IntegerField()
     frame = models.ForeignKey(
         Frame,
         on_delete=models.CASCADE,
@@ -580,6 +713,27 @@ class ShipyardShip(models.Model):
         on_delete=models.CASCADE,
     )
 
+    @classmethod
+    def add(cls, shipyard_ship_data, frame, reactor, engine, modules: List[Module], mounts: List[Mount], crew):
+        shipyard_ship, created = cls.objects.update_or_create(
+            ship_type=shipyard_ship_data['type'],
+            name=shipyard_ship_data['name'],
+            description=shipyard_ship_data['description'],
+            frame=frame,
+            reactor=reactor,
+            engine=engine,
+            crew=crew
+        )
+
+        # TODO look into `bulk_create`
+        for module in modules:
+            ShipyardShipModuleLink.add(shipyard_ship, module)
+
+        for mount in mounts:
+            ShipyardShipMountLink.add(shipyard_ship, mount)
+
+        return shipyard_ship
+
 
 class ShipyardShipModuleLink(models.Model):
     shipyard_ship = models.ForeignKey(
@@ -591,6 +745,14 @@ class ShipyardShipModuleLink(models.Model):
         on_delete=models.CASCADE,
         choices=SHIP_MODULE_SYMBOL
     )
+
+    @classmethod
+    def add(cls, shipyard_ship, module):
+        shipyard_ship_module_link, created = cls.objects.update_or_create(
+            shipyard_ship=shipyard_ship,
+            module=module
+        )
+        return shipyard_ship_module_link
 
 
 class ShipyardShipMountLink(models.Model):
@@ -604,13 +766,22 @@ class ShipyardShipMountLink(models.Model):
         choices=SHIP_MOUNT_SYMBOL
     )
 
+    @classmethod
+    def add(cls, shipyard_ship, mount):
+        shipyard_ship_mount_link, created = cls.objects.update_or_create(
+            shipyard_ship=shipyard_ship,
+            mount=mount
+        )
+        return shipyard_ship_mount_link
+
 
 class Shipyard(models.Model):
-    waypoint_symbol = models.ForeignKey(
+    waypoint = models.ForeignKey(
         'systems.Waypoint',
         on_delete=models.CASCADE,
     )
     # The API returns a list with ship types sold here, but you can get than info in the ships field
+    # Might need to change this to a ManyToOneField
     ships = models.ManyToManyField(
         ShipyardShip,
         through='ShipyardShipLink',
@@ -620,6 +791,27 @@ class Shipyard(models.Model):
     modifications_fee = models.IntegerField(
         verbose_name="the fee to modify a ship at this shipyard. This includes installing or removing modules and mounts on a ship. In the case of mounts, the fee is a flat rate per mount. In the case of modules, the fee is per slot the module occupies."
     )
+
+    @classmethod
+    def add(cls, shipyard_data, waypoint):
+        shipyard, created = cls.objects.update_or_create(
+            waypoint=waypoint,
+            modifications_fee=shipyard_data['modificationsFee']
+        )
+
+        # TODO look into `bulk_create`
+        for shipyard_ship_data in shipyard_data['ships']:
+            shipyard_ship = ShipyardShip.add(
+                shipyard_ship_data,
+                Frame.add(shipyard_ship_data['frame']),
+                Reactor.add(shipyard_ship_data['reactor']),
+                Engine.add(shipyard_ship_data['engine']),
+                [Module.add(module) for module in shipyard_ship_data['modules']],
+                [Mount.add(mount, shipyard_ship_data['deposits']) for mount in shipyard_ship_data['mounts']],
+                ShipCrew.add(shipyard_ship_data['crew'])
+            )
+            ShipyardShipLink.add(shipyard_ship_data, shipyard, shipyard_ship)
+        return shipyard
 
 
 class ShipyardShipLink(models.Model):
@@ -631,10 +823,34 @@ class ShipyardShipLink(models.Model):
         ShipyardShip,
         on_delete=models.CASCADE,
     )
+    purchase_price = models.IntegerField(
+        verbose_name="the price of the ship at this shipyard."
+    )
+    supply = models.CharField(
+        max_length=500,
+        choices=MARKET_SUPPLY,
+        verbose_name="the supply of the ship at this shipyard."
+    )
+    activity = models.CharField(
+        max_length=500,
+        choices=MARKET_ACTIVITY,
+        verbose_name="the activity level of a trade good. If the good is an import, this represents how strong consumption is for the good. If the good is an export, this represents how strong the production is for the good."
+    )
+
+    @classmethod
+    def add(cls, shipyard_ship_data, shipyard, shipyard_ship):
+        shipyard_ship_link, created = cls.objects.update_or_create(
+            shipyard=shipyard,
+            shipyard_ship=shipyard_ship,
+            purchase_price=shipyard_ship_data['purchasePrice'],
+            supply=shipyard_ship_data['supply'],
+            activity=shipyard_ship_data['activity']
+        )
+        return shipyard_ship_link
 
 
 class ShipyardTransaction(models.Model):
-    shipyard_waypoint_symbol = models.ForeignKey(
+    shipyard = models.ForeignKey(
         Shipyard,
         verbose_name="the symbol of the waypoint where the transaction took place.",
         on_delete=models.CASCADE,
@@ -650,8 +866,19 @@ class ShipyardTransaction(models.Model):
         validators=[MinValueValidator(0)]
     )
     agent_symbol = models.ForeignKey(
-         'agents.Agent',
+        'agents.Agent',
         verbose_name="the symbol of the agent that made the transaction.",
         on_delete=models.CASCADE
     )
     timestamp = models.DateTimeField()
+
+    @classmethod
+    def add(cls, shipyard_transaction_data, shipyard, ship, agent):
+        shipyard_transaction, created = cls.objects.update_or_create(
+            shipyard=shipyard,
+            ship=ship,
+            price=shipyard_transaction_data['price'],
+            agent_symbol=agent,
+            timestamp=shipyard_transaction_data['timestamp']
+        )
+        return shipyard_transaction

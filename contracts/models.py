@@ -40,10 +40,10 @@ class Contract(models.Model):
     )
 
     @classmethod
-    def add(cls, contract_data):
+    def add(cls, contract_data, faction):
         contract, created = cls.objects.update_or_create(
             contract_id=contract_data['id'],
-            faction_symbol=Faction.objects.get(symbol=contract_data['faction']),
+            faction_symbol=faction,
             contract_type=contract_data['type'],
             accepted=contract_data['accepted'],
             fulfilled=contract_data['fulfilled'],
@@ -98,11 +98,11 @@ class Delivery(models.Model):
     )
 
     @classmethod
-    def add(cls, delivery_data, terms):
+    def add(cls, delivery_data, terms, trade_good, waypoint):
         delivery, created = cls.objects.update_or_create(
             terms=terms,
-            trade_good_symbol=TradeGood.objects.get(symbol=delivery_data['tradeSymbol']),
-            destination=Waypoint.objects.get(symbol=delivery_data['destinationSymbol']),
+            trade_good_symbol=trade_good,
+            destination=waypoint,
             units_required=delivery_data['unitsRequired'],
             units_fulfilled=delivery_data['unitsFulfilled']
         )
