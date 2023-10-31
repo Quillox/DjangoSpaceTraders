@@ -594,7 +594,6 @@ class ShipCargoInventory(models.Model):
         validators=[MinValueValidator(1)]
     )
 
-    # TODO might change this so that it adds the trade_goods to the database inside the method, as we get all the data from the API
     @classmethod
     def add(cls, inventory_data, ship):
         ship_cargo_inventory = []
@@ -607,7 +606,6 @@ class ShipCargoInventory(models.Model):
                 )
             )
         return ship_cargo_inventory
-
 
 
 class FuelConsumedLog(models.Model):

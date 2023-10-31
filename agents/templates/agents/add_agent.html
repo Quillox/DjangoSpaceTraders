@@ -1,0 +1,18 @@
+{% extends 'base_agents.html' %}
+{% block content %}
+<h2>Add Agent</h2>
+<form method="post">
+    {% csrf_token %}
+    <label for="symbol">Symbol:</label>
+    <input type="text" id="symbol" name="symbol">
+    <button type="submit">Save</button>
+</form>
+
+{% if messages %}
+<ul class="messages">
+    {% for message in messages %}
+    <li{% if message.tags %} class="{{ message.tags }}" {% endif %}>{{ message }}</li>
+    {% endfor %}
+</ul>
+{% endif %}
+{% endblock %}

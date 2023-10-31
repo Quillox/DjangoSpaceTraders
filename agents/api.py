@@ -2,7 +2,7 @@ import requests
 from time import sleep
 
 from factions.models import Faction, FACTION_SYMBOLS
-from systems.models import System, Waypoint, Chart
+from systems.models import System, TradeGood, Waypoint, Chart
 from .models import Agent
 from contracts.models import Contract
 
@@ -153,17 +153,25 @@ class SpaceTradersAPI:
         agent_data = cls.get_no_token(f'agents/{agent_symbol}')['data']
         headquarters = agent_data['headquarters']
         cls.get_add_system(headquarters)
-        return Agent.add(agent_data)
+        waypoint = Waypoint.objects.get(symbol=headquarters)
+        faction = Faction.objects.get(symbol=agent_data['startingFaction'])
+        return Agent.add(agent_data, waypoint, faction)
 
     def get_add_my_agent(self):
         agent_data = self.get_token('my/agent')['data']
         headquarters = agent_data['headquarters']
         self.get_add_system(headquarters)
-        return Agent.add(agent_data)
+        waypoint = Waypoint.objects.get(symbol=headquarters)
+        faction = Faction.objects.get(symbol=agent_data['startingFaction'])
+        return Agent.add(agent_data, waypoint, faction)
     
     def get_add_contract(self, contract_id):
         contract_data = self.get_token(f'my/contracts/{contract_id}')['data']
-        contract = Contract.add(contract_data)
+        faction = Faction.objects.get(symbol=contract_data['factionSymbol'])
+        SpaceTradersAPI.get_add_system(contract_data['terms']['deliver']['destinationSymbol'])
+        waypoint = Waypoint.objects.get(symbol=contract_data['terms']['deliver']['destinationSymbol'])
+        trade_good = TradeGood.add({'symbol':contract_data['terms']['deliver']['tradeSymbol']})
+        contract = Contract.add(contract_data, faction, waypoint, trade_good)
         return contract
 
 

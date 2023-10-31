@@ -261,10 +261,14 @@ class TradeGood(models.Model):
     )
     # These might have to be nullable
     name = models.CharField(
-        max_length=500
+        max_length=500,
+        null=True,
+        blank=True
     )
     description = models.CharField(
-        max_length=5000
+        max_length=5000,
+        null=True,
+        blank=True
     )
 
 

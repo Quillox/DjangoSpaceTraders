@@ -1,4 +1,4 @@
-{% extends 'base_agents.html' %}
+{% extends 'base.html' %}
 
 {% block title %}Home{% endblock %}
 
@@ -12,6 +12,25 @@
 <h1>Welcome to my SpaceTraders client</h1>
 <p>Please <a href="{% url 'login' %}">log in</a> if you want to play the game. Otherwise you can just browse.</p>
 {% endif %}
+
+<h2>Add Agent</h2>
+<form method="post">
+    {% csrf_token %}
+    <label for="public_agent_symbol">Public Agent Symbol:</label>
+    <input type="text" id="public_agent_symbol" name="public_agent_symbol">
+    <button type="submit">Save</button>
+</form>
+
+{% if user.is_authenticated %}
+<h2>Add Contract</h2>
+<form method="post">
+    {% csrf_token %}
+    <label for="contract_id">Contract ID:</label>
+    <input type="text" id="contract_id" name="contract_id">
+    <button type="submit">Save</button>
+</form>
+{% endif %}
+
 
 <h2>Messages</h2>
 {% if messages %}

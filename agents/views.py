@@ -9,8 +9,22 @@ from .api import SpaceTradersAPI
 
 
 def home(request):
+    if request.method == 'POST':
+        if request.POST.get('public_agent_symbol'):
+            print(f'Adding agent {request.POST.get("public_agent_symbol")} to the database...')
+            agent = SpaceTradersAPI.get_add_public_agent(
+                request.POST.get('public_agent_symbol')
+            )
+            messages.success(request, f'Agent {agent.symbol} successfully added to the database!')
+            return redirect('agents:detail', pk=agent.symbol)
+        elif request.POST.get('contract_id'):
+            contract_id = request.POST.get("contract_id")
+            print(f'Adding contract {contract_id} to the database...')
+            api = SpaceTradersAPI(request.user.token)
+            contract = api.get_add_contract(contract_id)
+            messages.success(request, f'Contract {contract.id} successfully added to the database!')
+            return redirect('contracts:detail', pk=contract.id)
     return render(request, 'agents/home.html')
-
 
 @login_required
 def enter_token(request):
@@ -44,26 +58,26 @@ def enter_token(request):
         return render(request, 'agents/enter_token.html')
 
 
-@login_required
-def register_agent(request):
-    if request.method == 'POST':
-        if 'register_agent' in request.POST:
-            # Get the required information from the user
-            agent_symbol = request.POST.get('agent_symbol')
-            starting_faction = request.POST.get('starting_faction')
+# @login_required
+# def register_agent(request):
+#     if request.method == 'POST':
+#         if 'register_agent' in request.POST:
+#             # Get the required information from the user
+#             agent_symbol = request.POST.get('agent_symbol')
+#             starting_faction = request.POST.get('starting_faction')
 
-            messages.success(
-                request, f'Agent {agent_symbol} successfully registered with the {starting_faction} faction!')
-            return redirect('home')
-        elif 'add_agent' in request.POST:
-            api = SpaceTradersAPI(request.user.token)
-            agent_details = api.get_token('my/agent')['data']
-            agent = Agent.add(agent_details)
-            agent.save()
-            messages.success(
-                request, f'Agent {agent.symbol} successfully added to the database!')
+#             messages.success(
+#                 request, f'Agent {agent_symbol} successfully registered with the {starting_faction} faction!')
+#             return redirect('home')
+#         elif 'add_agent' in request.POST:
+#             api = SpaceTradersAPI(request.user.token)
+#             agent_details = api.get_token('my/agent')['data']
+#             agent = Agent.add(agent_details)
+#             agent.save()
+#             messages.success(
+#                 request, f'Agent {agent.symbol} successfully added to the database!')
 
-    return render(request, 'agents/register_agent.html')
+#     return render(request, 'agents/register_agent.html')
 
 
 class IndexView(generic.ListView):
@@ -72,9 +86,11 @@ class IndexView(generic.ListView):
 
     def get_queryset(self):
         return Agent.objects.all()
+    
 
 
 class DetailView(generic.DetailView):
     model = Agent
     # THis is the default template name
     template_name = 'agents/detail.html'
+

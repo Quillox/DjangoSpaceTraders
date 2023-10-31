@@ -29,7 +29,7 @@ from django.urls import path, include
 from agents.views import home
 
 urlpatterns = [
-    path('', home, name='home'),
+    path('home/', home, name='home'),
     path('agents/', include('agents.urls')),
     path('contracts/', include('contracts.urls')),
     path('factions/', include('factions.urls')),

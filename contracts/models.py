@@ -25,6 +25,12 @@ class Contract(models.Model):
         max_length=500,
         choices=CONTRACT_TYPES
     )
+    # TODO implement this
+    terms = models.OneToOneField(
+        'Terms',
+        on_delete=models.CASCADE,
+        related_name='contract'
+    )
     accepted = models.BooleanField(
         default=False
     )
@@ -40,7 +46,7 @@ class Contract(models.Model):
     )
 
     @classmethod
-    def add(cls, contract_data, faction):
+    def add(cls, contract_data, faction, waypoint, trade_good):
         contract, created = cls.objects.update_or_create(
             contract_id=contract_data['id'],
             faction_symbol=faction,
@@ -50,13 +56,14 @@ class Contract(models.Model):
             deadline_to_accept=contract_data['deadlineToAccept']
         )
         terms = Terms.add(contract_data['terms'], contract)
-        Delivery.add(contract_data['terms']['deliver'], terms)
+        Delivery.add(contract_data['terms']['deliver'], trade_good, waypoint, terms)
 
 
 class Terms(models.Model):
     contract = models.ForeignKey(
         Contract,
         on_delete=models.CASCADE,
+        related_name='terms'
     )
     deadline = models.DateTimeField()
     payment_on_accepted = models.IntegerField(

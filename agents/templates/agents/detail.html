@@ -9,7 +9,11 @@
     <tr>
         <th>Headquarters:</th>
         <td>
-            <a href="{% url 'systems:waypoint_detail' system_symbol=agent.headquarters.system.symbol pk=agent.headquarters.pk %}">{{ agent.headquarters.symbol }}</a> - {{ agent.headquarters.waypoint_type }}
+            {% if agent.headquarters.system.symbol and agent.headquarters.pk %}
+                <a href="{% url 'systems:waypoint_detail' system_symbol=agent.headquarters.system.symbol pk=agent.headquarters.pk %}">{{ agent.headquarters.symbol }}</a> - {{ agent.headquarters.waypoint_type }}
+            {% else %}
+                <p>Information not available</p>
+            {% endif %}
         </td>
     </tr>
     <tr>
