@@ -276,8 +276,11 @@ class TradeGood(models.Model):
     def add(cls, trade_good_data):
         trade_good, created = cls.objects.update_or_create(
             symbol=trade_good_data['symbol'],
-            name=trade_good_data['name'],
-            description=trade_good_data['description']
+            defaults={
+                'symbol': trade_good_data['symbol'],
+                'name': trade_good_data['name'],
+                'description': trade_good_data['description']
+            }
         )
         return trade_good
 
@@ -311,12 +314,16 @@ class System(models.Model):
 
     @classmethod
     def add(cls, system_data):
+        print(f'Adding system {system_data["symbol"]} to the database...')
         system, created = cls.objects.update_or_create(
             symbol=system_data['symbol'],
-            sector_symbol=system_data['sectorSymbol'],
-            system_type=system_data['type'],
-            x=system_data['x'],
-            y=system_data['y']
+            defaults={
+                'symbol': system_data['symbol'],
+                'sector_symbol': system_data['sectorSymbol'],
+                'system_type': system_data['type'],
+                'x': system_data['x'],
+                'y': system_data['y']
+            }
         )
         for faction_data in system_data.get('factions'):
             if faction_data:
@@ -341,7 +348,11 @@ class SystemFactionLink(models.Model):
     def add(cls, system, faction):
         system_faction_link, created = cls.objects.update_or_create(
             system=system,
-            faction=faction
+            faction=faction,
+            defaults={
+                'system': system,
+                'faction': faction
+            }
         )
         return system_faction_link
 
@@ -394,20 +405,8 @@ class Waypoint(models.Model):
     )
 
     def __str__(self) -> str:
-        ans = f'{self.symbol}: {self.waypoint_type} controlled by {self.faction} and is {", ".join([t.name for t in self.traits.all()])}.'
-        ans_chart = f'Charted by {self.chart.submitted_by} on {self.chart.submitted_on}.'
-        ans_no_chart = 'Uncharted.'
-        ans_orbits = f'Orbits {self.orbits}.'
-        if self.chart:
-            ans += f' {ans_chart}'
-        else:
-            ans += f' {ans_no_chart}'
-        if self.orbits:
-            ans += f' {ans_orbits}'
+        ans = f'{self.symbol} - {self.waypoint_type}'
         return ans
-
-    def __repr__(self) -> str:
-        return self.__str__()
 
     @classmethod
     def add(cls, waypoint_data):
@@ -423,13 +422,16 @@ class Waypoint(models.Model):
             faction = None
         waypoint, created = cls.objects.update_or_create(
             symbol=waypoint_data['symbol'],
-            system=System.objects.get(symbol=system_symbol),
-            waypoint_type=waypoint_data['type'],
-            x=waypoint_data['x'],
-            y=waypoint_data['y'],
-            orbits=parent_waypoint,
-            faction=faction,
-            is_under_construction=waypoint_data['isUnderConstruction']
+            defaults={
+                'symbol': waypoint_data['symbol'],
+                'system': System.objects.get(symbol=system_symbol),
+                'waypoint_type': waypoint_data['type'],
+                'x': waypoint_data['x'],
+                'y': waypoint_data['y'],
+                'orbits': parent_waypoint,
+                'faction': faction,
+                'is_under_construction': waypoint_data['isUnderConstruction']
+            }
         )
         for trait in waypoint_data.get('traits'):
             if trait:
@@ -443,6 +445,7 @@ class Waypoint(models.Model):
                 WaypointModifierLink.add(waypoint, waypoint_modifier)
             else:
                 continue
+        print(f'\tWaypoint {waypoint.symbol} added to the database.')
         return waypoint
 
 
@@ -466,8 +469,11 @@ class WaypointTrait(models.Model):
     def add(cls, waypoint_trait_data):
         waypoint_trait, created = cls.objects.update_or_create(
             symbol=waypoint_trait_data['symbol'],
-            name=waypoint_trait_data['name'],
-            description=waypoint_trait_data['description']
+            defaults={
+                'symbol': waypoint_trait_data['symbol'],
+                'name': waypoint_trait_data['name'],
+                'description': waypoint_trait_data['description']
+            }
         )
         return waypoint_trait
 
@@ -487,7 +493,11 @@ class WaypointTraitLink(models.Model):
     def add(cls, waypoint, waypoint_trait):
         waypoint_trait_link, created = cls.objects.update_or_create(
             waypoint=waypoint,
-            waypoint_trait=waypoint_trait
+            waypoint_trait=waypoint_trait,
+            defaults={
+                'waypoint': waypoint,
+                'waypoint_trait': waypoint_trait
+            }
         )
         return waypoint_trait_link
 
@@ -512,8 +522,11 @@ class WaypointModifier(models.Model):
     def add(cls, waypoint_modifier_data):
         waypoint_modifier, created = cls.objects.update_or_create(
             symbol=waypoint_modifier_data['symbol'],
-            name=waypoint_modifier_data['name'],
-            description=waypoint_modifier_data['description']
+            defaults={
+                'symbol': waypoint_modifier_data['symbol'],
+                'name': waypoint_modifier_data['name'],
+                'description': waypoint_modifier_data['description']
+            }
         )
         return waypoint_modifier
 
@@ -532,7 +545,10 @@ class WaypointModifierLink(models.Model):
     def add(cls, waypoint, waypoint_modifier):
             waypoint_modifier_link, created = cls.objects.update_or_create(
                 waypoint=waypoint,
-                waypoint_modifier=waypoint_modifier
+                defaults={
+                    'waypoint': waypoint,
+                    'waypoint_modifier': waypoint_modifier
+                }
             )
             return waypoint_modifier_link
 
@@ -561,8 +577,11 @@ class Chart(models.Model):
     def add(cls, waypoint, agent, submitted_on):
         chart, created = cls.objects.update_or_create(
             waypoint_symbol=waypoint,
-            submitted_by=agent,
-            submitted_on=submitted_on
+            defaults={
+                'waypoint_symbol': waypoint,
+                'submitted_by': agent,
+                'submitted_on': submitted_on
+            }
         )
         return chart
 
@@ -600,7 +619,10 @@ class Market(models.Model):
     @classmethod
     def add(cls, market_data):
         market, created = cls.objects.update_or_create(
-            symbol=Waypoint.objects.get(symbol=market_data['symbol'])
+            symbol=Waypoint.objects.get(symbol=market_data['symbol']),
+            defaults={
+                'symbol': Waypoint.objects.get(symbol=market_data['symbol'])
+            }
         )
         for trade_good_data in market_data.get('exports'):
             if trade_good_data:
@@ -643,7 +665,11 @@ class MarketExportLink(models.Model):
     def add(cls, market, trade_good):
         market_export_link, created = cls.objects.update_or_create(
             market=market,
-            trade_good=trade_good
+            trade_good=trade_good,
+            defaults={
+                'market': market,
+                'trade_good': trade_good
+            }
         )
         return market_export_link
 
@@ -662,7 +688,11 @@ class MarketImportLink(models.Model):
     def add(cls, market, trade_good):
         market_import_link, created = cls.objects.update_or_create(
             market=market,
-            trade_good=trade_good
+            trade_good=trade_good,
+            defaults={
+                'market': market,
+                'trade_good': trade_good
+            }
         )
         return market_import_link
 
@@ -681,7 +711,11 @@ class MarketExchangeLink(models.Model):
     def add(cls, market, trade_good):
         market_exchange_link, created = cls.objects.update_or_create(
             market=market,
-            trade_good=trade_good
+            trade_good=trade_good,
+            defaults={
+                'market': market,
+                'trade_good': trade_good
+            }
         )
         return market_exchange_link
 
@@ -701,7 +735,11 @@ class MarketTradeGoodLink(models.Model):
     def add(cls, market, trade_good):
         market_trade_good_link, created = cls.objects.update_or_create(
             market=market,
-            trade_good=trade_good
+            trade_good=trade_good,
+            defaults={
+                'market': market,
+                'trade_good': trade_good
+            }
         )
         return market_trade_good_link
 
@@ -749,7 +787,17 @@ class MarketTransaction(models.Model):
             units=transactions_data['units'],
             price_per_unit=transactions_data['pricePerUnit'],
             total_price=transactions_data['totalPrice'],
-            timestamp=transactions_data['timestamp']
+            timestamp=transactions_data['timestamp'],
+            defaults={
+                'market': market,
+                'ship_symbol': ship,
+                'trade_good': trade_good,
+                'transaction_type': transactions_data['type'],
+                'units': transactions_data['units'],
+                'price_per_unit': transactions_data['pricePerUnit'],
+                'total_price': transactions_data['totalPrice'],
+                'timestamp': transactions_data['timestamp']
+            }
         )
         return market_transaction
 
@@ -769,6 +817,10 @@ class JumpGateLink(models.Model):
     def add(cls, jump_gate, destination):
         jump_gate_link, created = cls.objects.update_or_create(
             jump_gate=jump_gate,
-            destination=destination
+            destination=destination,
+            defaults={
+                'jump_gate': jump_gate,
+                'destination': destination
+            }
         )
         return jump_gate_link

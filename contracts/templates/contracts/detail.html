@@ -1,6 +1,65 @@
 {% extends 'base_contracts.html' %}
 
 {% block content %}
-<h1>Contract details</h1>
-{{ contract }}
+<h2>Contract details</h2>
+<table>
+    <tr>
+        <th>Contract ID:</th>
+        <td>{{ contract.contract_id }}</td>
+    </tr>
+    <tr>
+        <th>Faction:</th>
+        <td><a href="{% url 'factions:detail' contract.faction.symbol %}">{{ contract.faction.name }}</a>
+        </td>
+    </tr>
+    <tr>
+        <th>Contract Type:</th>
+        <td>{{ contract.contract_type }}</td>
+    </tr>
+    <tr>
+        <th>Accepted:</th>
+        <td>{{ contract.accepted }}</td>
+    </tr>
+    <tr>
+        <th>Fulfilled:</th>
+        <td>{{ contract.fulfilled }}</td>
+    </tr>
+    <tr>
+        <th>Deadline to Accept:</th>
+        <td>{{ contract.deadline_to_accept }}</td>
+    </tr>
+    <tr>
+        <th>Terms:</th>
+        <td>
+            Deadline: {{ contract.terms.deadline }}<br>
+            Payment on Accepted: {{ contract.terms.payment_on_accepted }}<br>
+            Payment on Fulfilled: {{ contract.terms.payment_on_fulfilled }}
+        </td>
+    </tr>
+    <tr>
+        <th>Deliveries:</th>
+        <td>
+            {% for delivery in contract.terms.deliveries.all %}
+            Trade Good: {{ delivery.trade_good.symbol }}<br>
+            Destination: {{ delivery.destination }}<br>
+            Units Required: {{ delivery.units_required }}<br>
+            Units Fulfilled: {{ delivery.units_fulfilled }}<br>
+            {% endfor %}
+        </td>
+    </tr>
+</table>
+
+
+<div>
+    {% if contract.accepted is False %}
+    <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="accept" value="true">
+        <input type="hidden" name="contract_id" value="{{ contract.pk }}">
+        <label for="accept">Accept Contract:</label>
+        <input type="submit" value="Accept">
+    </form>
+    {% endif %}
+</div>
+
 {% endblock %}

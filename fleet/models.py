@@ -155,11 +155,17 @@ class Fleet(models.Model):
     pass
 
 class ShipRegistration(models.Model):
+    ship = models.OneToOneField(
+        'fleet.Ship',
+        primary_key=True,
+        on_delete=models.CASCADE,
+        related_name='registration'
+    )
     name = models.ForeignKey(
         'agents.Agent',
         on_delete=models.CASCADE,
     )
-    faction_symbol = models.ForeignKey(
+    faction = models.ForeignKey(
         'factions.Faction',
         on_delete=models.CASCADE,
     )
@@ -169,17 +175,22 @@ class ShipRegistration(models.Model):
     )
 
     @classmethod
-    def add(cls, ship_registration_data, agent, faction):
+    def add(cls, ship_registration_data, ship, agent, faction):
         registration, created = cls.objects.update_or_create(
+            ship=ship,
             name=agent,
-            faction_symbol=faction,
-            ship_role=ship_registration_data['role']
+            defaults={
+                'ship': ship,
+                'name': agent,
+                'faction': faction,
+                'ship_role': ship_registration_data['role']
+            }
         )
         return registration
 
 
 class ShipNav(models.Model):
-    current_system_symbol = models.ForeignKey(
+    current_system = models.ForeignKey(
         'systems.System',
         on_delete=models.CASCADE,
     )
@@ -205,11 +216,18 @@ class ShipNav(models.Model):
     @classmethod
     def add(cls, ship_nav_data, system, waypoint, route):
         ship_nav, created = cls.objects.update_or_create(
-            current_system_symbol=system,
+            current_system=system,
             waypoint=waypoint,
             route=route,
             status=ship_nav_data['status'],
-            flight_mode=ship_nav_data['flightMode']
+            flight_mode=ship_nav_data['flightMode'],
+            defaults={
+                'current_system': system,
+                'waypoint': waypoint,
+                'route': route,
+                'status': ship_nav_data['status'],
+                'flight_mode': ship_nav_data['flightMode']
+            }
         )
         return ship_nav
 
@@ -242,12 +260,19 @@ class ShipNavRoute(models.Model):
             destination=destination,
             origin=origin,
             departure_time=ship_nav_route_data['departureTime'],
-            arrival_time=ship_nav_route_data['arrival']
+            arrival_time=ship_nav_route_data['arrival'],
+            defaults={
+                'destination': destination,
+                'origin': origin,
+                'departure_time': ship_nav_route_data['departureTime'],
+                'arrival_time': ship_nav_route_data['arrival']
+            }
         )
         return ship_nav_route
 
 
 class ShipCrew(models.Model):
+    # TODO add OneToOneField to Ship
     current = models.IntegerField(
         verbose_name='the current number of crew members on the ship.'
     )
@@ -281,19 +306,33 @@ class ShipCrew(models.Model):
             capacity=ship_crew_data['capacity'],
             rotation=ship_crew_data['rotation'],
             morale=ship_crew_data['morale'],
-            wages=ship_crew_data['wages']
+            wages=ship_crew_data['wages'],
+            defaults={
+                'current': ship_crew_data['current'],
+                'required': ship_crew_data['required'],
+                'capacity': ship_crew_data['capacity'],
+                'rotation': ship_crew_data['rotation'],
+                'morale': ship_crew_data['morale'],
+                'wages': ship_crew_data['wages']
+            }
         )
         return ship_crew
 
 
 class ShipComponent(TradeGood):
     power = models.IntegerField(
+        null=True,
+        blank=True,
         verbose_name="the amount of power required from the reactor."
     )
     crew = models.IntegerField(
+        null=True,
+        blank=True,
         verbose_name="the amount of crew required for operation."
     )
     slots = models.IntegerField(
+        null=True,
+        blank=True,
         verbose_name="the number of module slots required for installation."
     )
 
@@ -314,7 +353,7 @@ class Frame(ShipComponent):
         verbose_name='the amount of slots that can be dedicated to mounts installed in the ship. Each installed mount takes up a number of points, and once there are no more points remaining, no new mounts can be installed.',
         validators=[MinValueValidator(0)]
     )
-    fuelCapacity = models.IntegerField(
+    fuel_capacity = models.IntegerField(
         verbose_name='the maximum amount of fuel that can be stored in this ship. When refuelling, the ship will be refuelled to this amount.',
         validators=[MinValueValidator(0)]
     )
@@ -323,15 +362,18 @@ class Frame(ShipComponent):
     def add(cls, frame_data):
         frame, created = cls.objects.update_or_create(
             symbol=frame_data['symbol'],
-            name=frame_data['name'],
-            description=frame_data['description'],
-            condition=frame_data['condition'],
-            module_slots=frame_data['moduleSlots'],
-            mounting_points=frame_data['mountingPoints'],
-            fuelCapacity=frame_data['fuelCapacity'],
-            power=frame_data['requirements']['power'],
-            crew=frame_data['requirements']['crew'],
-            slots=frame_data['requirements']['slots']
+            defaults={
+                'symbol': frame_data['symbol'],
+                'name': frame_data['name'],
+                'description': frame_data['description'],
+                'condition': frame_data['condition'],
+                'module_slots': frame_data['moduleSlots'],
+                'mounting_points': frame_data['mountingPoints'],
+                'fuel_capacity': frame_data['fuelCapacity'],
+                'power': frame_data['requirements'].get('power'),
+                'crew': frame_data['requirements'].get('crew'),
+                'slots': frame_data['requirements'].get('slots')
+            }
         )
         return frame
 
@@ -350,13 +392,16 @@ class Reactor(ShipComponent):
     def add(cls, reactor_data):
         reactor, created = cls.objects.update_or_create(
             symbol=reactor_data['symbol'],
-            name=reactor_data['name'],
-            description=reactor_data['description'],
-            condition=reactor_data['condition'],
-            power_output=reactor_data['powerOutput'],
-            power=reactor_data['requirements']['power'],
-            crew=reactor_data['requirements']['crew'],
-            slots=reactor_data['requirements']['slots']
+            defaults={
+                'symbol': reactor_data['symbol'],
+                'name': reactor_data['name'],
+                'description': reactor_data['description'],
+                'condition': reactor_data['condition'],
+                'power_output': reactor_data['powerOutput'],
+                'power': reactor_data['requirements'].get('power'),
+                'crew': reactor_data['requirements'].get('crew'),
+                'slots': reactor_data['requirements'].get('slots')
+            }
         )
         return reactor
 
@@ -375,13 +420,16 @@ class Engine(ShipComponent):
     def add(cls, engine_data):
         engine, created = cls.objects.update_or_create(
             symbol=engine_data['symbol'],
-            name=engine_data['name'],
-            description=engine_data['description'],
-            condition=engine_data['condition'],
-            speed=engine_data['speed'],
-            power=engine_data['requirements']['power'],
-            crew=engine_data['requirements']['crew'],
-            slots=engine_data['requirements']['slots']
+            defaults={
+                'symbol': engine_data['symbol'],
+                'name': engine_data['name'],
+                'description': engine_data['description'],
+                'condition': engine_data['condition'],
+                'speed': engine_data['speed'],
+                'power': engine_data['requirements'].get('power'),
+                'crew': engine_data['requirements'].get('crew'),
+                'slots': engine_data['requirements'].get('slots')
+            }
         )
         return engine
 
@@ -403,19 +451,24 @@ class Module(ShipComponent):
     def add(cls, module_data):
         module, created = cls.objects.update_or_create(
             symbol=module_data['symbol'],
-            name=module_data['name'],
-            description=module_data['description'],
-            capacity=module_data['capacity'],
-            sensor_range=module_data['sensorRange'],
-            power=module_data['requirements']['power'],
-            crew=module_data['requirements']['crew'],
-            slots=module_data['requirements']['slots']
+            defaults={
+                'symbol': module_data['symbol'],
+                'name': module_data['name'],
+                'description': module_data['description'],
+                'capacity': module_data.get('capacity'),
+                'sensor_range': module_data.get('sensorRange'),
+                'power': module_data['requirements'].get('power'),
+                'crew': module_data['requirements'].get('crew'),
+                'slots': module_data['requirements'].get('slots')
+            }
         )
         return module
 
 
 class Mount(ShipComponent):
     strength = models.IntegerField(
+        null=True,
+        blank=True,
         verbose_name="mounts that have this value, such as mining lasers, denote how powerful this mount's capabilities are.",
         validators=[MinValueValidator(0)]
     )
@@ -430,12 +483,15 @@ class Mount(ShipComponent):
     def add(cls, mount_data, deposits: list):
         mount, created = cls.objects.update_or_create(
             symbol=mount_data['symbol'],
-            name=mount_data['name'],
-            description=mount_data['description'],
-            strength=mount_data['strength'],
-            power=mount_data['requirements']['power'],
-            crew=mount_data['requirements']['crew'],
-            slots=mount_data['requirements']['slots']
+            defaults={
+                'symbol': mount_data['symbol'],
+                'name': mount_data['name'],
+                'description': mount_data['description'],
+                'strength': mount_data.get('strength'),
+                'power': mount_data['requirements'].get('power'),
+                'crew': mount_data['requirements'].get('crew'),
+                'slots': mount_data['requirements'].get('slots')
+            }
         )
 
         for deposit in deposits:
@@ -460,7 +516,11 @@ class MountDepositLink(models.Model):
     def add(cls, mount, deposit):
         mount_deposit_link, created = cls.objects.update_or_create(
             mount=mount,
-            trade_good=deposit
+            trade_good=deposit,
+            defaults={
+                'mount': mount,
+                'trade_good': deposit
+            }
         )
         return mount_deposit_link
 
@@ -474,10 +534,6 @@ class Ship(models.Model):
     symbol = models.CharField(
         primary_key=True,
         max_length=500,
-    )
-    registration = models.OneToOneField(
-        ShipRegistration,
-        on_delete=models.CASCADE,
     )
     nav = models.OneToOneField(
         ShipNav,
@@ -526,20 +582,30 @@ class Ship(models.Model):
     )
 
     @classmethod
-    def add(cls, ship_data, agent, registration, nav, crew, frame, reactor, engine, modules: List[Module], mounts: List[Mount]):
+    def add(cls, ship_data, agent, faction, nav, crew, frame, reactor, engine, modules: List[Module], mounts: List[Mount]):
         ship, created = cls.objects.update_or_create(
             agent=agent,
             symbol=ship_data['symbol'],
-            registration=registration,
-            nav=nav,
-            crew=crew,
-            frame=frame,
-            reactor=reactor,
-            engine=engine,
-            cargo_capacity=ship_data['cargo']['capacity'],
-            cargo_units=ship_data['cargo']['units'],
-            fuel_current=ship_data['fuel']['current'],
-            fuel_capacity=ship_data['fuel']['capacity']
+            defaults={
+                'agent': agent,
+                'symbol': ship_data['symbol'],
+                'nav': nav,
+                'crew': crew,
+                'frame': frame,
+                'reactor': reactor,
+                'engine': engine,
+                'cargo_capacity': ship_data['cargo']['capacity'],
+                'cargo_units': ship_data['cargo']['units'],
+                'fuel_current': ship_data['fuel']['current'],
+                'fuel_capacity': ship_data['fuel']['capacity']
+            }
+        )
+
+        ShipRegistration.add(
+            ship_data['registration'],
+            ship,
+            agent,
+            faction,
         )
 
         # TODO look into `bulk_create`
@@ -575,9 +641,12 @@ class Cooldown(models.Model):
     def add(cls, cooldown_data, ship):
         cooldown, created = cls.objects.update_or_create(
             ship_symbol=ship,
-            total_seconds=cooldown_data['totalSeconds'],
-            remaining_seconds=cooldown_data['remainingSeconds'],
-            expiration=cooldown_data['expiration']
+            defaults={
+                'ship_symbol': ship,
+                'total_seconds': cooldown_data['totalSeconds'],
+                'remaining_seconds': cooldown_data['remainingSeconds'],
+                'expiration': cooldown_data['expiration']
+            }
         )
         return cooldown
 
@@ -602,7 +671,11 @@ class ShipCargoInventory(models.Model):
                 cls.objects.update_or_create(
                     ship_symbol=ship,
                     trade_good=TradeGood.add(trade_good_data),
-                    units=trade_good_data['units']
+                    defaults={
+                        'ship_symbol': ship,
+                        'trade_good': TradeGood.add(trade_good_data),
+                        'units': trade_good_data['units']
+                    }
                 )
             )
         return ship_cargo_inventory
@@ -625,8 +698,11 @@ class FuelConsumedLog(models.Model):
     def add(cls, fuel_consumed_log_data, ship):
         fuel_consumed_log, created = cls.objects.update_or_create(
             ship_symbol=ship,
-            amount=fuel_consumed_log_data['amount'],
-            timestamp=fuel_consumed_log_data['timestamp']
+            defaults={
+                'ship_symbol': ship,
+                'amount': fuel_consumed_log_data['amount'],
+                'timestamp': fuel_consumed_log_data['timestamp']
+            }
         )
         return fuel_consumed_log
 
@@ -646,7 +722,11 @@ class ShipModuleLink(models.Model):
     def add(cls, ship, module):
         ship_module_link, created = cls.objects.update_or_create(
             ship=ship,
-            module=module
+            module=module,
+            defaults={
+                'ship': ship,
+                'module': module
+            }
         )
         return ship_module_link
 
@@ -666,7 +746,11 @@ class ShipMountLink(models.Model):
     def add(cls, ship, mount):
         ship_mount_link, created = cls.objects.update_or_create(
             ship=ship,
-            mount=mount
+            mount=mount,
+            defaults={
+                'ship': ship,
+                'mount': mount
+            }
         )
         return ship_mount_link
 
@@ -720,7 +804,16 @@ class ShipyardShip(models.Model):
             frame=frame,
             reactor=reactor,
             engine=engine,
-            crew=crew
+            crew=crew,
+            defaults={
+                'ship_type': shipyard_ship_data['type'],
+                'name': shipyard_ship_data['name'],
+                'description': shipyard_ship_data['description'],
+                'frame': frame,
+                'reactor': reactor,
+                'engine': engine,
+                'crew': crew
+            }
         )
 
         # TODO look into `bulk_create`
@@ -748,7 +841,11 @@ class ShipyardShipModuleLink(models.Model):
     def add(cls, shipyard_ship, module):
         shipyard_ship_module_link, created = cls.objects.update_or_create(
             shipyard_ship=shipyard_ship,
-            module=module
+            module=module,
+            defaults={
+                'shipyard_ship': shipyard_ship,
+                'module': module
+            }
         )
         return shipyard_ship_module_link
 
@@ -768,7 +865,11 @@ class ShipyardShipMountLink(models.Model):
     def add(cls, shipyard_ship, mount):
         shipyard_ship_mount_link, created = cls.objects.update_or_create(
             shipyard_ship=shipyard_ship,
-            mount=mount
+            mount=mount,
+            defaults={
+                'shipyard_ship': shipyard_ship,
+                'mount': mount
+            }
         )
         return shipyard_ship_mount_link
 
@@ -794,7 +895,10 @@ class Shipyard(models.Model):
     def add(cls, shipyard_data, waypoint):
         shipyard, created = cls.objects.update_or_create(
             waypoint=waypoint,
-            modifications_fee=shipyard_data['modificationsFee']
+            defaults={
+                'waypoint': waypoint,
+                'modifications_fee': shipyard_data['modificationsFee']
+            }
         )
 
         # TODO look into `bulk_create`
@@ -840,9 +944,13 @@ class ShipyardShipLink(models.Model):
         shipyard_ship_link, created = cls.objects.update_or_create(
             shipyard=shipyard,
             shipyard_ship=shipyard_ship,
-            purchase_price=shipyard_ship_data['purchasePrice'],
-            supply=shipyard_ship_data['supply'],
-            activity=shipyard_ship_data['activity']
+            defaults={
+                'shipyard': shipyard,
+                'shipyard_ship': shipyard_ship,
+                'purchase_price': shipyard_ship_data['purchasePrice'],
+                'supply': shipyard_ship_data['supply'],
+                'activity': shipyard_ship_data['activity']
+            }
         )
         return shipyard_ship_link
 
@@ -877,6 +985,13 @@ class ShipyardTransaction(models.Model):
             ship=ship,
             price=shipyard_transaction_data['price'],
             agent_symbol=agent,
-            timestamp=shipyard_transaction_data['timestamp']
+            timestamp=shipyard_transaction_data['timestamp'],
+            defaults={
+                'shipyard': shipyard,
+                'ship': ship,
+                'price': shipyard_transaction_data['price'],
+                'agent_symbol': agent,
+                'timestamp': shipyard_transaction_data['timestamp']
+            }
         )
         return shipyard_transaction

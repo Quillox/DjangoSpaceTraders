@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+
+{% block title %}Agents{% endblock %}
+
+{% block sidebar %}
+<aside>
+    <ul>
+        <li><a href="{% url 'player:home' %}">Home</a></li>
+        {% if player.is_authenticated %}
+        <li><a href="{% url 'agents:detail' player.agent.symbol %}">My Agent</a></li>
+        {% endif %}
+    </ul>
+</aside>
+{% endblock %}

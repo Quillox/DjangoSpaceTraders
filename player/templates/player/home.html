@@ -1,13 +1,13 @@
-{% extends 'base.html' %}
+{% extends 'base_player.html' %}
 
 {% block title %}Home{% endblock %}
 
-
 {% block content %}
 
-{% if user.is_authenticated %}
-<h1>Welcome, {{ user.username }}!</h1>
+{% if player.is_authenticated %}
+<h1>Welcome, {{ player.username }}!</h1>
 <p>You are logged in.</p>
+<p>Your agent is {{player.agent.symbol}}</p>
 {% else %}
 <h1>Welcome to my SpaceTraders client</h1>
 <p>Please <a href="{% url 'login' %}">log in</a> if you want to play the game. Otherwise you can just browse.</p>
@@ -29,16 +29,19 @@
     <input type="text" id="contract_id" name="contract_id">
     <button type="submit">Save</button>
 </form>
+
+<h2>Add Ship</h2>
+<form method="post">
+    {% csrf_token %}
+    <label for="ship_id">Ship ID:</label>
+    <input type="text" id="ship_id" name="ship_id">
+    <button type="submit">Save</button>
+</form>
+
+
 {% endif %}
 
 
-<h2>Messages</h2>
-{% if messages %}
-<ul class="messages">
-    {% for message in messages %}
-    <li{% if message.tags %} class="{{ message.tags }}" {% endif %}>{{ message }}</li>
-    {% endfor %}
-</ul>
-{% endif %}
+
 
 {% endblock %}

@@ -1,7 +1,7 @@
 from django.shortcuts import render
 from django.views import generic
 
-from .models import Fleet
+from .models import Ship
 
 
 class IndexView(generic.ListView):
@@ -9,10 +9,9 @@ class IndexView(generic.ListView):
     context_object_name = 'fleet_list'
 
     def get_queryset(self):
-        return Fleet.objects.all()
-
+        return Ship.objects.filter(agent=self.request.user.agent.pk).all()
 
 class DetailView(generic.DetailView):
-    model = Fleet
+    model = Ship
     template_name = 'fleet/detail.html'
 

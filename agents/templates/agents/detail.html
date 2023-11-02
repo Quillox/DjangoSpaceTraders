@@ -22,7 +22,7 @@
     </tr>
     <tr>
         <th>Starting faction:</th>
-        <td>{{ agent.starting_faction.name }}</td>
+        <td><a href="{% url 'factions:detail' agent.starting_faction.symbol %}">{{ agent.starting_faction.name }}</a></td>
     </tr>
     <tr>
         <th>Ship count:</th>
@@ -33,4 +33,13 @@
         <td>{{ agent.account_id }}</td>
     </tr>
 </table>
+
+<form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="update" value="true">
+    <input type="hidden" name="agent_id" value="{{ agent.pk }}">
+    <label for="update">Update Agent:</label>
+    <input type="submit" value="Update">
+</form>
+
 {% endblock %}

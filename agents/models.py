@@ -1,24 +1,4 @@
-from django.contrib.auth.models import AbstractUser
 from django.db import models
-
-from factions.models import Faction
-from systems.models import Waypoint
-
-class User(AbstractUser):
-    token = models.CharField(
-        max_length=600,
-        unique=True,
-        null=True,
-        blank=True,
-        help_text='SpaceTraders API token for this user.'
-    )
-    agent = models.OneToOneField(
-        'Agent',
-        related_name='django_user',
-        on_delete=models.CASCADE,
-        null=True,
-        help_text='The symbol of the SpaceTraders agent associated with this user.'
-    )
 
 
 class Agent(models.Model):
@@ -60,10 +40,13 @@ class Agent(models.Model):
     def add(cls, agent_data, waypoint, faction):
         agent, created = cls.objects.update_or_create(
             symbol=agent_data['symbol'],
-            headquarters=waypoint,
-            credit=agent_data['credits'],
-            starting_faction=faction,
-            ship_count=agent_data.get('shipCount'),
-            account_id=agent_data.get('accountId')
+            defaults={
+                'symbol': agent_data['symbol'],
+                'headquarters': waypoint,
+                'credit': agent_data['credits'],
+                'starting_faction': faction,
+                'ship_count': agent_data.get('shipCount'),
+                'account_id': agent_data.get('accountId')
+            }
         )
         return agent

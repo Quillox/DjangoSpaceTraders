@@ -17,19 +17,13 @@ class Contract(models.Model):
         primary_key=True,
         max_length=500
     )
-    faction_symbol = models.ForeignKey(
+    faction = models.ForeignKey(
         'factions.Faction',
         on_delete=models.CASCADE,
     )
     contract_type = models.CharField(
         max_length=500,
         choices=CONTRACT_TYPES
-    )
-    # TODO implement this
-    terms = models.OneToOneField(
-        'Terms',
-        on_delete=models.CASCADE,
-        related_name='contract'
     )
     accepted = models.BooleanField(
         default=False
@@ -45,25 +39,36 @@ class Contract(models.Model):
         blank=True
     )
 
+    def __str__(self):
+        return f'{self.contract_type} for {self.faction.name}. Payment {self.terms.payment_on_accepted} + {self.terms.payment_on_fulfilled}.'
+
     @classmethod
-    def add(cls, contract_data, faction, waypoint, trade_good):
+    def add(cls, contract_data, faction):
         contract, created = cls.objects.update_or_create(
             contract_id=contract_data['id'],
-            faction_symbol=faction,
-            contract_type=contract_data['type'],
-            accepted=contract_data['accepted'],
-            fulfilled=contract_data['fulfilled'],
-            deadline_to_accept=contract_data['deadlineToAccept']
+            defaults={
+                'contract_id': contract_data['id'],
+                'faction': faction,
+                'contract_type': contract_data['type'],
+                'accepted': contract_data['accepted'],
+                'fulfilled': contract_data['fulfilled'],
+                'deadline_to_accept': contract_data['deadlineToAccept']
+            }
         )
         terms = Terms.add(contract_data['terms'], contract)
-        Delivery.add(contract_data['terms']['deliver'], trade_good, waypoint, terms)
+        for delivery_data in contract_data['terms']['deliver']:
+            waypoint = Waypoint.objects.get(symbol=delivery_data['destinationSymbol'])
+            trade_good = TradeGood.objects.get(symbol=delivery_data['tradeSymbol'])
+            Delivery.add(delivery_data=delivery_data, terms=terms, trade_good=trade_good, waypoint=waypoint)
+        return contract
 
 
 class Terms(models.Model):
-    contract = models.ForeignKey(
+    contract = models.OneToOneField(
         Contract,
         on_delete=models.CASCADE,
-        related_name='terms'
+        related_name='terms',
+        primary_key=True
     )
     deadline = models.DateTimeField()
     payment_on_accepted = models.IntegerField(
@@ -77,9 +82,11 @@ class Terms(models.Model):
     def add(cls, terms_data, contract):
         terms, created = cls.objects.update_or_create(
             contract=contract,
-            deadline=terms_data['deadline'],
-            payment_on_accepted=terms_data['payment']['onAccepted'],
-            payment_on_fulfilled=terms_data['payment']['onFulfilled']
+            defaults={
+                'deadline': terms_data['deadline'],
+                'payment_on_accepted': terms_data['payment']['onAccepted'],
+                'payment_on_fulfilled': terms_data['payment']['onFulfilled']
+            }
         )
         return terms
 
@@ -88,8 +95,9 @@ class Delivery(models.Model):
     terms = models.ForeignKey(
         Terms,
         on_delete=models.CASCADE,
+        related_name='deliveries'
     )
-    trade_good_symbol = models.ForeignKey(
+    trade_good = models.ForeignKey(
         'systems.TradeGood',
         on_delete=models.CASCADE,
     )
@@ -108,9 +116,12 @@ class Delivery(models.Model):
     def add(cls, delivery_data, terms, trade_good, waypoint):
         delivery, created = cls.objects.update_or_create(
             terms=terms,
-            trade_good_symbol=trade_good,
-            destination=waypoint,
-            units_required=delivery_data['unitsRequired'],
-            units_fulfilled=delivery_data['unitsFulfilled']
+            defaults={
+                'terms': terms,
+                'trade_good': trade_good,
+                'destination': waypoint,
+                'units_required': delivery_data['unitsRequired'],
+                'units_fulfilled': delivery_data['unitsFulfilled']
+            }
         )
         return delivery

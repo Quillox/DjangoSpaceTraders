@@ -5,7 +5,7 @@
 {% block sidebar %}
 <aside>
     <ul>
-        {% if user.agent.symbol%}
+        {% if player.agent.symbol%}
         <li><a href="{% url 'agents:detail' user.agent.symbol %}">My Agent</a></li>
         {% endif %}
         <li><a href="{% url 'agents:index' %}">Agents</a></li>

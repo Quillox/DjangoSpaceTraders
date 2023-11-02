@@ -120,10 +120,13 @@ class Faction(models.Model):
     def add_faction_no_waypoint(cls, faction_data):
         faction, created = cls.objects.update_or_create(
             symbol=faction_data['symbol'],
-            name=faction_data['name'],
-            description=faction_data['description'],
-            headquarters=None,
-            is_recruiting=faction_data['isRecruiting']
+            defaults={
+                'symbol': faction_data['symbol'],
+                'name': faction_data['name'],
+                'description': faction_data['description'],
+                'headquarters': None,
+                'is_recruiting': faction_data['isRecruiting']
+            }
         )
         for trait in faction_data.get('traits'):
             if trait:
@@ -154,8 +157,11 @@ class FactionTrait(models.Model):
     def add(cls, faction_trait_data):
         faction_trait, created = cls.objects.update_or_create(
             symbol=faction_trait_data['symbol'],
-            name=faction_trait_data['name'],
-            description=faction_trait_data['description']
+            defaults={
+                'symbol': faction_trait_data['symbol'],
+                'name': faction_trait_data['name'],
+                'description': faction_trait_data['description']
+            }
         )
         return faction_trait
 
@@ -176,7 +182,11 @@ class FactionTraitLink(models.Model):
     def add(cls, faction, faction_trait):
         faction_trait_link, created = cls.objects.update_or_create(
             faction=faction,
-            faction_trait=faction_trait
+            faction_trait=faction_trait,
+            defaults={
+                'faction': faction,
+                'faction_trait': faction_trait
+            }
         )
         faction_trait_link.save()
         return faction_trait_link

@@ -26,14 +26,13 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
-from agents.views import home
 
 urlpatterns = [
-    path('home/', home, name='home'),
     path('agents/', include('agents.urls')),
     path('contracts/', include('contracts.urls')),
     path('factions/', include('factions.urls')),
     path('fleet/', include('fleet.urls')),
+    path('player/', include('player.urls')),
     path('systems/', include('systems.urls')),
     path('accounts/', include('django.contrib.auth.urls')),
     path('admin/', admin.site.urls),

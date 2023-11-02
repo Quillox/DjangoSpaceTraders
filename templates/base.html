@@ -12,7 +12,7 @@
     <header>
         <nav>
             <ul>
-                <li><a href="{% url 'home' %}">Home</a></li>
+                <li><a href="{% url 'player:home' %}">Home</a></li>
                 <li><a href="{% url 'agents:index' %}">Agents</a></li>
                 <li><a href="{% url 'contracts:index' %}">Contracts</a></li>
                 <li><a href="{% url 'factions:index' %}">Factions</a></li>
@@ -44,5 +44,15 @@
         </main>
     </div>
 </body>
+
+<footer>
+    {% if messages %}
+    <ul class="messages">
+        {% for message in messages %}
+        <li{% if message.tags %} class="{{ message.tags }}" {% endif %}>{{ message }}</li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+</footer>
 
 </html>

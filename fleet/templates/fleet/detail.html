@@ -1,6 +1,64 @@
 {% extends 'base_fleet.html' %}
 
 {% block content %}
-<h1>Fleet details</h1>
-{{ fleet }}
+<h2>Ship details</h2>
+<table>
+    <tr>
+        <th>Agent:</th>
+        <td>
+            <a href="{% url 'agents:detail' ship.agent.symbol %}">{{ ship.agent.symbol }}</a>
+    </tr>
+    <tr>
+        <th>Symbol:</th>
+        <td>{{ ship.symbol }}</td>
+    </tr>
+    <tr>
+        <th>Frame:</th>
+        <td>{{ ship.frame }}</td>
+    </tr>
+    <tr>
+        <th>Reactor:</th>
+        <td>{{ ship.reactor }}</td>
+    </tr>
+    <tr>
+        <th>Engine:</th>
+        <td>{{ ship.engine }}</td>
+    </tr>
+    <tr>
+        <th>Cargo Capacity:</th>
+        <td>{{ ship.cargo_capacity }}</td>
+    </tr>
+    <tr>
+        <th>Cargo Units:</th>
+        <td>{{ ship.cargo_units }}</td>
+    </tr>
+    <tr>
+        <th>Fuel Current:</th>
+        <td>{{ ship.fuel_current }}</td>
+    </tr>
+    <tr>
+        <th>Fuel Capacity:</th>
+        <td>{{ ship.fuel_capacity }}</td>
+    </tr>
+    <tr>
+        <th>Modules:</th>
+        <td>
+            <ul>
+                {% for module in ship.modules.all %}
+                <li>{{ module }}</li>
+                {% endfor %}
+            </ul>
+        </td>
+    </tr>
+    <tr>
+        <th>Mounts:</th>
+        <td>
+            <ul>
+                {% for mount in ship.mounts.all %}
+                <li>{{ mount }}</li>
+                {% endfor %}
+            </ul>
+        </td>
+    </tr>
+</table>
 {% endblock %}
