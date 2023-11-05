@@ -41,7 +41,7 @@
         <td>
             {% for delivery in contract.terms.deliveries.all %}
             Trade Good: {{ delivery.trade_good.symbol }}<br>
-            Destination: {{ delivery.destination }}<br>
+            Destination: <a href="{% url 'systems:waypoint_detail' system_symbol=delivery.destination.system.pk pk=delivery.destination.pk %}">{{ delivery.destination }}</a><br>
             Units Required: {{ delivery.units_required }}<br>
             Units Fulfilled: {{ delivery.units_fulfilled }}<br>
             {% endfor %}
@@ -60,6 +60,16 @@
         <input type="submit" value="Accept">
     </form>
     {% endif %}
+</div>
+
+<div>
+    <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="update" value="true">
+        <input type="hidden" name="contract_id" value="{{ contract.pk }}">
+        <label for="update">Update Contract:</label>
+        <input type="submit" value="Update">
+    </form>
 </div>
 
 {% endblock %}

@@ -30,12 +30,19 @@
     <button type="submit">Save</button>
 </form>
 
+<form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="update_contracts" value="true">
+    <label for="update_contracts">Update Contracts:</label>
+    <input type="submit" value="Update">
+</form>
+
 <h2>Add Ship</h2>
 <form method="post">
     {% csrf_token %}
-    <label for="ship_id">Ship ID:</label>
-    <input type="text" id="ship_id" name="ship_id">
-    <button type="submit">Save</button>
+    <input type="hidden" name="update_fleet" value="true">
+    <label for="update_fleet">Update Fleet:</label>
+    <input type="submit" value="Update">
 </form>
 
 

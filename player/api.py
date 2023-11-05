@@ -35,24 +35,7 @@ class SpaceTradersAPI:
 
     def __init__(self, api_token):
         self.api_token = api_token
-        self.api_status = self.check_api_status()
         self.agent = Player.objects.get(token=api_token).agent
-
-    def check_api_status(self):
-        api_status = self.get_token('')
-        if api_status is None:
-            response_no_auth = requests.get(self.base_url)
-            if response_no_auth.status_code == 200:
-                print('API is up!')
-                print('Invalid API token!')
-                return 'Invalid API token!'
-            else:
-                print('API is down!')
-                return 'Offline'
-        else:
-            print('API is up!')
-            print('Valid API token!')
-            return 'Online'
 
     def get_token(self, endpoint):
         headers = {
@@ -95,11 +78,18 @@ class SpaceTradersAPI:
 
     @classmethod
     def validate_token(cls, token):
-        api = cls(token)
-        if api.check_api_status() == 'Invalid API token!':
+        response_no_auth = requests.get(cls.base_url)
+        if response_no_auth.status_code != 200:
+            print('API is down!')
             return False
         else:
-            return True
+            response = requests.get(f'{cls.base_url}/my/account', headers={"Authorization": f"Bearer {token}"})
+            if response.status_code != 200:
+                print('Invalid API token!')
+                return False
+            else:
+                print('Valid API token!')
+                return True
 
     @classmethod
     def get_add_system(cls, system_symbol):
@@ -171,12 +161,22 @@ class SpaceTradersAPI:
     
     def get_add_contract(self, contract_id):
         contract_data = self.get_token(f'my/contracts/{contract_id}')['data']
+        contract = self.add_contract(contract_data)
+        return contract
+
+    def add_contract(self, contract_data):
         faction = Faction.objects.get(symbol=contract_data['factionSymbol'])
         for deliver_data in contract_data['terms']['deliver']:
             SpaceTradersAPI.get_add_system(deliver_data['destinationSymbol'])
             TradeGood.add({'symbol':deliver_data['tradeSymbol'], 'name':None, 'description':None})
-        contract = Contract.add(contract_data, faction)
+        contract = Contract.add(contract_data, self.agent, faction)
         return contract
+    
+    def get_add_all_contracts(self):
+        contracts_data = self.get_token('my/contracts')['data']
+        for contract_data in contracts_data:
+            self.add_contract(contract_data)
+            return Contract.objects.filter(agent=self.agent)
     
     def contract_accept(self, contract_id):
         response = self.post_token(f'my/contracts/{contract_id}/accept', {})
@@ -189,14 +189,13 @@ class SpaceTradersAPI:
     def get_add_ship(self, ship_symbol):
         ship_data = self.get_token(f'my/ships/{ship_symbol}')['data']
         agent = self.agent
-        faction = Faction.objects.get(symbol=ship_data['registration']['factionSymbol'])
-        nav_system = self.get_add_system(ship_data['nav']['systemSymbol'])
-        nav_waypoint = Waypoint.objects.get(symbol=ship_data['nav']['waypointSymbol'])
-        route_destination = Waypoint.objects.get(symbol=ship_data['nav']['route']['destination']['symbol'])
-        route_origin = Waypoint.objects.get(symbol=ship_data['nav']['route']['origin']['symbol'])
-        route = ShipNavRoute.add(ship_data['nav']['route'], route_origin, route_destination)
-        nav = ShipNav.add(ship_data['nav'], nav_system, nav_waypoint, route)
-        crew = ShipCrew.add(ship_data['crew'])
+
+        ship = self.add_ship(ship_data, agent)
+
+        return ship
+
+    @classmethod
+    def add_ship(cls, ship_data, agent):
         frame = Frame.add(ship_data['frame'])
         reactor = Reactor.add(ship_data['reactor'])
         engine = Engine.add(ship_data['engine'])
@@ -211,8 +210,28 @@ class SpaceTradersAPI:
                     deposits.append(TradeGood.add({'symbol':trade_good_symbol, 'name':None, 'description':None}))
             mounts.append(Mount.add(mount_data, deposits))
 
-        ship = Ship.add(ship_data, agent, faction, nav, crew, frame, reactor, engine, modules, mounts)
+        ship = Ship.add(ship_data, agent, frame, reactor, engine, modules, mounts)
+
+        faction = Faction.objects.get(symbol=ship_data['registration']['factionSymbol'])
+        registration = ShipRegistration.add(ship_data['registration'], ship, agent, faction)
+
+        nav_system = cls.get_add_system(ship_data['nav']['systemSymbol'])
+        nav_waypoint = Waypoint.objects.get(symbol=ship_data['nav']['waypointSymbol'])
+        nav = ShipNav.add(ship_data['nav'], ship, nav_system, nav_waypoint)
+        route_destination = Waypoint.objects.get(symbol=ship_data['nav']['route']['destination']['symbol'])
+        route_origin = Waypoint.objects.get(symbol=ship_data['nav']['route']['origin']['symbol'])
+        route = ShipNavRoute.add(ship_data['nav']['route'], nav, route_destination, route_origin)
+
+        crew = ShipCrew.add(ship_data['crew'], ship)
         return ship
+
+    def get_add_fleet(self):
+        fleet_data = self.get_token('my/ships')['data']
+        agent = self.agent
+        fleet = []
+        for ship_data in fleet_data:
+            fleet.append(self.add_ship(ship_data, agent))
+        return fleet
 
     @classmethod
     def populate_factions(cls):
@@ -236,7 +255,7 @@ class SpaceTradersAPI:
             Agent.add(faction_agent_data, None, faction)
             print(f'Added {faction.symbol} with mock agent {faction.symbol}-agent to the database.')
 
-        # Now add the waypoints to the factions
+        # Now add the system headquarters to the factions
         for faction_data in response.json()['data']:
             faction = Faction.objects.get(symbol=faction_data['symbol'])
 
@@ -247,8 +266,6 @@ class SpaceTradersAPI:
                 headquarters = System.objects.get(symbol=headquarters_symbol)
                 faction.headquarters = headquarters
                 faction.save()
-                agent = Agent.objects.get(symbol=f'{faction.symbol}-agent')
-                agent.headquarters = headquarters
                 print(f'Updated {faction.symbol} headquarters: {headquarters_symbol}')
 
 

@@ -10,5 +10,13 @@
 </ul>
 {% else %}
 <p>No factions are available.</p>
+
+<form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="populate" value="true">
+    <label for="populate">Populate Factions:</label>
+    <input type="submit" value="Populate">
+</form>
+
 {% endif %}
 {% endblock %}

@@ -31,9 +31,15 @@ class DetailView(generic.DetailView):
 
             SpaceTradersAPI.get_add_system(contract_accepted_data['agent']['headquarters'])
             waypoint = Waypoint.objects.get(symbol=contract_accepted_data['agent']['headquarters'])
-            Agent.add(contract_accepted_data['agent'], faction, waypoint)
+            Agent.add(contract_accepted_data['agent'], faction=faction, waypoint=waypoint)
 
-            contract = Contract.add(contract_accepted_data['contract'], faction)
+            contract = Contract.add(contract_accepted_data['contract'], agent=request.user.agent, faction=faction)
             messages.success(request, f'Contract {contract} successfully accepted!')
-            return redirect('contracts:detail', pk=contract.id)
+            return redirect('contracts:detail', pk=contract.pk)
+        elif request.POST.get('update'):
+            print(f'Updating contract {request.POST.get("contract_id")}...')
+            api = SpaceTradersAPI(request.user.token)
+            contract = api.get_add_contract(request.POST.get('contract_id'))
+            messages.success(request, f'Contract {contract} successfully updated!')
+            return redirect('contracts:detail', pk=contract.pk)
         return super().get(request, *args, **kwargs)

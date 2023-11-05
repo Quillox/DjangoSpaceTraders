@@ -18,7 +18,7 @@
     <tr>
         <th>Headquarters:</th>
         {% if faction.headquarters is None %}
-        <td>None</td>
+        <td>Unknown</td>
         {% else %}
         <td><a href="{% url 'systems:detail' faction.headquarters.symbol %}">{{ faction.headquarters.symbol }}</a> -
             {{ faction.headquarters.system_type }}</td>

@@ -178,7 +178,6 @@ class ShipRegistration(models.Model):
     def add(cls, ship_registration_data, ship, agent, faction):
         registration, created = cls.objects.update_or_create(
             ship=ship,
-            name=agent,
             defaults={
                 'ship': ship,
                 'name': agent,
@@ -190,6 +189,12 @@ class ShipRegistration(models.Model):
 
 
 class ShipNav(models.Model):
+    ship = models.OneToOneField(
+        'fleet.Ship',
+        primary_key=True,
+        on_delete=models.CASCADE,
+        related_name='nav'
+    )
     current_system = models.ForeignKey(
         'systems.System',
         on_delete=models.CASCADE,
@@ -198,10 +203,6 @@ class ShipNav(models.Model):
         'systems.Waypoint',
         on_delete=models.CASCADE,
         verbose_name="The waypoint symbol of the ship's current location, or if the ship is in-transit, the waypoint symbol of the ship's destination."
-    )
-    route = models.ForeignKey(
-        'ShipNavRoute',
-        on_delete=models.CASCADE,
     )
     status = models.CharField(
         max_length=500,
@@ -214,17 +215,13 @@ class ShipNav(models.Model):
     )
 
     @classmethod
-    def add(cls, ship_nav_data, system, waypoint, route):
+    def add(cls, ship_nav_data, ship, system, waypoint):
         ship_nav, created = cls.objects.update_or_create(
-            current_system=system,
-            waypoint=waypoint,
-            route=route,
-            status=ship_nav_data['status'],
-            flight_mode=ship_nav_data['flightMode'],
+            ship=ship,
             defaults={
+                'ship': ship,
                 'current_system': system,
                 'waypoint': waypoint,
-                'route': route,
                 'status': ship_nav_data['status'],
                 'flight_mode': ship_nav_data['flightMode']
             }
@@ -233,6 +230,11 @@ class ShipNav(models.Model):
 
 
 class ShipNavRoute(models.Model):
+    ship_nav = models.OneToOneField(
+        ShipNav,
+        on_delete=models.CASCADE,
+        related_name='route'
+    )
     destination = models.ForeignKey(
         'systems.Waypoint',
         on_delete=models.CASCADE,
@@ -255,13 +257,11 @@ class ShipNavRoute(models.Model):
     )
 
     @classmethod
-    def add(cls, ship_nav_route_data, destination, origin):
+    def add(cls, ship_nav_route_data, ship_nav, destination, origin):
         ship_nav_route, created = cls.objects.update_or_create(
-            destination=destination,
-            origin=origin,
-            departure_time=ship_nav_route_data['departureTime'],
-            arrival_time=ship_nav_route_data['arrival'],
+            ship_nav=ship_nav,
             defaults={
+                'ship_nav': ship_nav,
                 'destination': destination,
                 'origin': origin,
                 'departure_time': ship_nav_route_data['departureTime'],
@@ -272,7 +272,12 @@ class ShipNavRoute(models.Model):
 
 
 class ShipCrew(models.Model):
-    # TODO add OneToOneField to Ship
+    ship = models.OneToOneField(
+        'fleet.Ship',
+        primary_key=True,
+        on_delete=models.CASCADE,
+        related_name='crew'
+    )
     current = models.IntegerField(
         verbose_name='the current number of crew members on the ship.'
     )
@@ -299,15 +304,11 @@ class ShipCrew(models.Model):
     )
 
     @classmethod
-    def add(cls, ship_crew_data):
+    def add(cls, ship_crew_data, ship):
         ship_crew, created = cls.objects.update_or_create(
-            current=ship_crew_data['current'],
-            required=ship_crew_data['required'],
-            capacity=ship_crew_data['capacity'],
-            rotation=ship_crew_data['rotation'],
-            morale=ship_crew_data['morale'],
-            wages=ship_crew_data['wages'],
+            ship=ship,
             defaults={
+                'ship': ship,
                 'current': ship_crew_data['current'],
                 'required': ship_crew_data['required'],
                 'capacity': ship_crew_data['capacity'],
@@ -535,14 +536,6 @@ class Ship(models.Model):
         primary_key=True,
         max_length=500,
     )
-    nav = models.OneToOneField(
-        ShipNav,
-        on_delete=models.CASCADE,
-    )
-    crew = models.OneToOneField(
-        ShipCrew,
-        on_delete=models.CASCADE,
-    )
     frame = models.ForeignKey(
         Frame,
         on_delete=models.CASCADE,
@@ -582,15 +575,13 @@ class Ship(models.Model):
     )
 
     @classmethod
-    def add(cls, ship_data, agent, faction, nav, crew, frame, reactor, engine, modules: List[Module], mounts: List[Mount]):
+    def add(cls, ship_data, agent, frame, reactor, engine, modules: List[Module], mounts: List[Mount]):
         ship, created = cls.objects.update_or_create(
             agent=agent,
             symbol=ship_data['symbol'],
             defaults={
                 'agent': agent,
                 'symbol': ship_data['symbol'],
-                'nav': nav,
-                'crew': crew,
                 'frame': frame,
                 'reactor': reactor,
                 'engine': engine,
@@ -599,13 +590,6 @@ class Ship(models.Model):
                 'fuel_current': ship_data['fuel']['current'],
                 'fuel_capacity': ship_data['fuel']['capacity']
             }
-        )
-
-        ShipRegistration.add(
-            ship_data['registration'],
-            ship,
-            agent,
-            faction,
         )
 
         # TODO look into `bulk_create`

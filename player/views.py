@@ -32,11 +32,16 @@ class HomeView(generic.ListView):
             contract = api.get_add_contract(contract_id)
             messages.success(request, f'Contract {contract} successfully added to the database!')
             return redirect('contracts:detail', pk=contract.contract_id)
-        elif request.POST.get('ship_id'):
-            ship_id = request.POST.get("ship_id")
-            print(f'Adding ship {ship_id} to the database...')
+        elif request.POST.get('update_contracts'):
+            print(f'Updating contracts...')
             api = SpaceTradersAPI(request.user.token)
-            ship = api.get_add_ship(ship_id)
-            messages.success(request, f'Ship {ship} successfully added to the database!')
-            return redirect('fleet:detail', pk=ship.pk)
+            contracts = api.get_add_all_contracts()
+            messages.success(request, f'Updated {len(contracts)} contracts!')
+            return redirect('contracts:index')
+        elif request.POST.get('update_fleet'):
+            print(f"Updating {request.user.agent.symbol}'s fleet...")
+            api = SpaceTradersAPI(request.user.token)
+            fleet = api.get_add_fleet()
+            messages.success(request, f'Updated {len(fleet)} ships in {request.user.agent.symbol}\'s fleet!')
+            return redirect('fleet:index')
         return super().get(request, *args, **kwargs)

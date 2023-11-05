@@ -13,6 +13,11 @@ CONTRACT_TYPES = [
 
 
 class Contract(models.Model):
+    agent = models.ForeignKey(
+        'agents.Agent',
+        on_delete=models.CASCADE,
+        related_name='contracts',
+    )
     contract_id = models.CharField(
         primary_key=True,
         max_length=500
@@ -43,10 +48,11 @@ class Contract(models.Model):
         return f'{self.contract_type} for {self.faction.name}. Payment {self.terms.payment_on_accepted} + {self.terms.payment_on_fulfilled}.'
 
     @classmethod
-    def add(cls, contract_data, faction):
+    def add(cls, contract_data, agent, faction):
         contract, created = cls.objects.update_or_create(
             contract_id=contract_data['id'],
             defaults={
+                'agent': agent,
                 'contract_id': contract_data['id'],
                 'faction': faction,
                 'contract_type': contract_data['type'],
