@@ -36,4 +36,47 @@
         </td>
     </tr>
 </table>
+
+{% if 'MARKETPLACE' in waypoint.traits.all %}
+<h3>Marketplace</h3>
+<form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="update_market" value="true">
+    <input type="hidden" name="market_symbol" value="{{ waypoint.pk }}">
+    <label for="update_market">Update Market:</label>
+    <input type="submit" value="Update">
+</form>
+
+{% if waypoint.market %}
+<h3>Market Data</h3>
+<table>
+    <thead>
+        <tr>
+            <th>Trade Good</th>
+            <th>Trade Type</th>
+            <th>Volume</th>
+            <th>Supply</th>
+            <th>Activity</th>
+            <th>Purchase Price</th>
+            <th>Sell Price</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for link in waypoint.market.markettradegoodlink_set.all %}
+        <tr>
+            <td>{{ link.trade_good }}</td>
+            <td>{{ link.trade_type }}</td>
+            <td>{{ link.volume }}</td>
+            <td>{{ link.supply }}</td>
+            <td>{{ link.activity }}</td>
+            <td>{{ link.purchase_price }}</td>
+            <td>{{ link.sell_price }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endif %}
+
+{% endif %}
+
 {% endblock %}

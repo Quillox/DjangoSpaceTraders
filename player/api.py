@@ -2,7 +2,7 @@ import requests
 from time import sleep
 
 from factions.models import Faction, FACTION_SYMBOLS
-from systems.models import System, TradeGood, Waypoint, Chart
+from systems.models import System, TradeGood, Waypoint, Chart, Market, MarketExportLink, MarketImportLink, MarketExchangeLink, MarketTradeGoodLink, MarketTransaction
 from agents.models import Agent
 from contracts.models import Contract
 from fleet.models import Ship, ShipRegistration, ShipNav, ShipNavRoute, ShipCrew, Frame, Reactor, Engine, Module, Mount
@@ -126,8 +126,14 @@ class SpaceTradersAPI:
             parent_waypoint_data = cls.get_no_token(f'systems/{system_symbol}/waypoints/{waypoint_data["orbits"]}')['data']
             cls._get_add_waypoint(parent_waypoint_data['symbol'])
 
+
         if waypoint_data.get('chart').get('submittedBy') and add_chart:
             waypoint = Waypoint.add(waypoint_data)
+
+            for trait_data in waypoint_data['traits']:
+                if trait_data['symbol'] == 'MARKETPLACE':
+                    cls.get_add_market(waypoint_symbol)
+                    break
 
             agent_symbol = waypoint_data['chart']['submittedBy']
             if agent_symbol in [symbol for symbol, _ in FACTION_SYMBOLS]:
@@ -136,8 +142,13 @@ class SpaceTradersAPI:
                 chart_agent = cls.get_add_public_agent(waypoint_data['chart']['submittedBy'])
             Chart.add(waypoint, chart_agent, waypoint_data['chart']['submittedOn'])
             return waypoint
-
-        return Waypoint.add(waypoint_data)
+        else:
+            waypoint = Waypoint.add(waypoint_data)
+            for trait_data in waypoint_data['traits']:
+                if trait_data['symbol'] == 'MARKETPLACE':
+                    cls.get_add_market(waypoint_symbol)
+                    break
+            return waypoint
 
     @classmethod
     def get_add_public_agent(cls, agent_symbol):
@@ -232,6 +243,13 @@ class SpaceTradersAPI:
         for ship_data in fleet_data:
             fleet.append(self.add_ship(ship_data, agent))
         return fleet
+
+    @classmethod
+    def get_add_market(cls, market_symbol):
+        system_symbol = get_sector_system_waypoint(market_symbol)['system']
+        market_data = cls.get_no_token(f'systems/{system_symbol}/waypoints/{market_symbol}/market')['data']
+        market = Market.add(market_data)
+        return market
 
     @classmethod
     def populate_factions(cls):

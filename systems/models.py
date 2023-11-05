@@ -103,6 +103,12 @@ WAYPOINT_MODIFIER_SYMBOL = [
     ('CIVIL_UNREST', 'Civil Unrest')
 ]
 
+TRADE_TYPE = [
+    ('EXPORT', 'Export'),
+    ('IMPORT', 'Import'),
+    ('EXCHANGE', 'Exchange')
+]
+
 TRANSACTION_TYPE = [
     ('PURCHASE', 'Purchase'),
     ('SELL', 'Sell')
@@ -112,6 +118,7 @@ MARKET_SUPPLY = [
     ('SCARCE', 'Scarce'),
     ('LIMITED', 'Limited'),
     ('MODERATE', 'Moderate'),
+    ('HIGH', 'High'),
     ('ABUNDANT', 'Abundant')
 ]
 
@@ -482,21 +489,23 @@ class WaypointTraitLink(models.Model):
     waypoint = models.ForeignKey(
         Waypoint,
         on_delete=models.CASCADE,
+        related_name='trait_links'
     )
     # TODO rename to trait
-    waypoint_trait = models.ForeignKey(
+    trait = models.ForeignKey(
         WaypointTrait,
         on_delete=models.CASCADE,
+        related_name='waypoint_links'
     )
 
     @classmethod
     def add(cls, waypoint, waypoint_trait):
         waypoint_trait_link, created = cls.objects.update_or_create(
             waypoint=waypoint,
-            waypoint_trait=waypoint_trait,
+            trait=waypoint_trait,
             defaults={
                 'waypoint': waypoint,
-                'waypoint_trait': waypoint_trait
+                'trait': waypoint_trait
             }
         )
         return waypoint_trait_link
@@ -585,10 +594,12 @@ class Chart(models.Model):
         )
         return chart
 
+
 class Market(models.Model):
-    symbol = models.ForeignKey(
+    symbol = models.OneToOneField(
         Waypoint,
         on_delete=models.CASCADE,
+        related_name='market'
     )
     exports = models.ManyToManyField(
         TradeGood,
@@ -624,30 +635,32 @@ class Market(models.Model):
                 'symbol': Waypoint.objects.get(symbol=market_data['symbol'])
             }
         )
-        for trade_good_data in market_data.get('exports'):
+        for trade_good_data in market_data.get('exports', []):
             if trade_good_data:
-                trade_good = TradeGood.objects.get(symbol=trade_good_data['symbol'])
+                trade_good = TradeGood.add(trade_good_data)
                 MarketExportLink.add(market, trade_good)
-            else:
-                continue
-        for trade_good_data in market_data.get('imports'):
+        for trade_good_data in market_data.get('imports', []):
             if trade_good_data:
-                trade_good = TradeGood.objects.get(symbol=trade_good_data['symbol'])
+                trade_good = TradeGood.add(trade_good_data)
                 MarketImportLink.add(market, trade_good)
-            else:
-                continue
-        for trade_good_data in market_data.get('exchanges'):
+        for trade_good_data in market_data.get('exchanges', []):
             if trade_good_data:
-                trade_good = TradeGood.objects.get(symbol=trade_good_data['symbol'])
+                trade_good = TradeGood.add(trade_good_data)
                 MarketExchangeLink.add(market, trade_good)
-            else:
-                continue
-        for trade_good_data in market_data.get('tradeGoods'):
+        for trade_good_data in market_data.get('tradeGoods', []):
             if trade_good_data:
-                trade_good = TradeGood.objects.get(symbol=trade_good_data['symbol'])
+                trade_good = TradeGood.add(trade_good_data)
                 MarketTradeGoodLink.add(market, trade_good)
             else:
                 continue
+        for transaction_data in market_data.get('transactions', []):
+            if transaction_data:
+                ship = Waypoint.objects.get(symbol=transaction_data['shipSymbol'])
+                trade_good = TradeGood.objects.get(symbol=transaction_data['tradeSymbol'])
+                MarketTransaction.add(transaction_data, market, ship, trade_good)
+            else:
+                continue
+        print(f'\t\tMarket {market.symbol} added to the database.')
         return market
 
 
@@ -729,16 +742,46 @@ class MarketTradeGoodLink(models.Model):
         TradeGood,
         on_delete=models.CASCADE,
     )
-    # TODO think about what extra information I could add here
+    trade_type = models.CharField(
+        max_length=500,
+        choices=TRADE_TYPE
+    )
+    volume = models.IntegerField(
+        verbose_name="the maximum number of units that can be purchased or sold at this market in a single trade for this good. Trade volume also gives an indication of price volatility. A market with a low trade volume will have large price swings, while high trade volume will be more resilient to price changes.",
+        validators=[MinValueValidator(1)]
+    )
+    supply = models.CharField(
+        max_length=500,
+        choices=MARKET_SUPPLY
+    )
+    activity = models.CharField(
+        max_length=500,
+        verbose_name="the activity level of a trade good. If the good is an import, this represents how strong consumption is for the good. If the good is an export, this represents how strong the production is for the good.",
+        choices=MARKET_ACTIVITY
+    )
+    purchase_price = models.IntegerField(
+        verbose_name="the price at which this good can be purchased from the market.",
+        validators=[MinValueValidator(0)]
+    )
+    sell_price = models.IntegerField(
+        verbose_name="the price at which this good can be sold to the market.",
+        validators=[MinValueValidator(0)]
+    )
 
     @classmethod
-    def add(cls, market, trade_good):
+    def add(cls, trade_data, market, trade_good):
         market_trade_good_link, created = cls.objects.update_or_create(
             market=market,
             trade_good=trade_good,
             defaults={
                 'market': market,
-                'trade_good': trade_good
+                'trade_good': trade_good,
+                'trade_type': trade_data['type'],
+                'volume': trade_data['tradeVolume'],
+                'supply': trade_data['supply'],
+                'activity': trade_data['activity'],
+                'purchase_price': trade_data['purchasePrice'],
+                'sell_price': trade_data['sellPrice']
             }
         )
         return market_trade_good_link

@@ -1,1 +1,19 @@
 {% extends 'base.html' %}
+
+{% block title %}Systems{% endblock %}
+
+{% block sidebar %}
+<aside>
+    <ul>
+        <a href="{% url 'systems:index' %}">Systems</a>
+        <br>
+        <a href="{% url 'systems:index' %}">Markets</a>
+        <br>
+        <a href="{% url 'systems:index' %}">Shipyards</a>
+        <br>
+        <a href="{% url 'systems:index' %}">Jump Gates</a>
+        <br>
+        <a href="{% url 'systems:index' %}">Construction Sites</a>
+    </ul>
+</aside>
+{% endblock %}
