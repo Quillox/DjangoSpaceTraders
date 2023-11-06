@@ -1,0 +1,15 @@
+{% extends 'base_systems.html' %}
+
+{% block content %}
+<h1>Waypoints</h1>
+
+{% if waypoint_list %}
+<ul>
+{% for waypoint in waypoint_list %}
+<li><a href="{% url 'systems:waypoint_detail' system_symbol=waypoint.system.symbol pk=waypoint.pk %}">{{ waypoint }}</a></li>
+{% endfor %}
+</ul>
+{% else %}
+<p>No waypoints are available.</p>
+{% endif %}
+{% endblock %}

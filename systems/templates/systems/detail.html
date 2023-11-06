@@ -37,12 +37,19 @@
     <tr>
         <th>Waypoints:</th>
         <td>
-            <ul>
-                {% for waypoint in system.waypoints.all %}
-                <li><a href="{% url 'systems:waypoint_detail' system_symbol=system.symbol pk=waypoint.pk %}">{{ waypoint.symbol }}</a> - {{ waypoint.waypoint_type }}</li>
-                {% endfor %}
-            </ul>
+            <a href="{% url 'systems:waypoint_index' system.symbol %}">Waypoints</a>
         </td>
     </tr>
 </table>
+
+
+<h3>Deep get waypoints</h3>
+<form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="update_system" value="true">
+    <input type="hidden" name="system_symbol" value="{{ system.pk }}">
+    <label for="update_system">Deep get waypoints:</label>
+    <input type="submit" value="Update">
+</form>
+
 {% endblock %}

@@ -2,7 +2,7 @@ import requests
 from time import sleep
 
 from factions.models import Faction, FACTION_SYMBOLS
-from systems.models import System, TradeGood, Waypoint, Chart, Market, MarketExportLink, MarketImportLink, MarketExchangeLink, MarketTradeGoodLink, MarketTransaction
+from systems.models import System, TradeGood, Waypoint, Chart, Market, JumpGate
 from agents.models import Agent
 from contracts.models import Contract
 from fleet.models import Ship, ShipRegistration, ShipNav, ShipNavRoute, ShipCrew, Frame, Reactor, Engine, Module, Mount
@@ -92,20 +92,64 @@ class SpaceTradersAPI:
                 return True
 
     @classmethod
-    def get_add_system(cls, system_symbol):
+    def get_add_system(cls, system_symbol, add_jump_gates=True):
+        sleep(0.5)
         system_symbol = get_sector_system_waypoint(system_symbol)['system']
         system_data = cls.get_no_token(f'systems/{system_symbol}')['data']
         system = System.add(system_data)
         for waypoint_data in system_data['waypoints']:
-            waypoint_symbol = waypoint_data['symbol']
-            if Waypoint.objects.filter(symbol=waypoint_symbol).exists():
-                continue
-            cls._get_add_waypoint(waypoint_symbol)
+            cls.add_waypoint(system_symbol, add_jump_gates, system_data, waypoint_data)
+
+        return system
+    
+    @classmethod
+    def system_deep_get(cls, system_symbol, add_jump_gates=True):
+        system_symbol = get_sector_system_waypoint(system_symbol)['system']
+        system_data = cls.get_no_token(f'systems/{system_symbol}')['data']
+        system = System.add(system_data)
+        for waypoint_data_shallow in system_data['waypoints']:
             sleep(0.5)
+            waypoint_data_deep = cls.get_no_token(f'systems/{system_symbol}/waypoints/{waypoint_data_shallow["symbol"]}')
+            if waypoint_data_deep:
+                waypoint_data_deep = waypoint_data_deep['data']
+                cls.add_waypoint(system_symbol, add_jump_gates, system_data, waypoint_data_deep)
+            else:
+                print(f'Waypoint {waypoint_data_shallow["symbol"]} not accessible!')
         return system
 
+
     @classmethod
-    def _get_add_waypoint(cls, waypoint_symbol, add_chart=True):
+    def add_waypoint(cls, system_symbol, add_jump_gates, system_data, waypoint_data):
+        if waypoint_data.get('orbits'):
+            parent_waypoint_symbol = waypoint_data['orbits']
+            parent_waypoint_data = next((waypoint for waypoint in system_data['waypoints'] if waypoint['symbol'] == parent_waypoint_symbol), None)
+            if parent_waypoint_data:
+                Waypoint.add(parent_waypoint_data)
+
+        waypoint = Waypoint.add(waypoint_data)
+            
+        if add_jump_gates:
+            if waypoint.waypoint_type == 'JUMP_GATE':
+                if cls.get_no_token(f'systems/{system_symbol}/waypoints/{waypoint.symbol}/jump-gate'):
+                    cls.get_add_jump_gate(waypoint.symbol)
+
+        if waypoint_data.get('traits'):
+            if 'MARKETPLACE' in [trait_data['symbol'] for trait_data in waypoint_data['traits']]:
+                if cls.get_no_token(f'systems/{system_symbol}/waypoints/{waypoint.symbol}/market'):
+                    cls.get_add_market(waypoint.symbol)
+
+        if waypoint_data.get('chart'):
+            agent_symbol = waypoint_data['chart']['submittedBy']
+            if agent_symbol in [symbol for symbol, _ in FACTION_SYMBOLS]:
+                chart_agent = Agent.objects.get(symbol=f'{agent_symbol}-agent')
+            else:
+                chart_agent = cls.get_add_public_agent(waypoint_data['chart']['submittedBy'])
+            Chart.add(waypoint, chart_agent, waypoint_data['chart']['submittedOn'])
+
+        return waypoint
+
+    @classmethod
+    def _get_add_waypoint(cls, waypoint_symbol):
         """Adds waypoint to the database. Don't use this method directly, use get_add_system instead.
 
         Parameters
@@ -127,28 +171,26 @@ class SpaceTradersAPI:
             cls._get_add_waypoint(parent_waypoint_data['symbol'])
 
 
-        if waypoint_data.get('chart').get('submittedBy') and add_chart:
-            waypoint = Waypoint.add(waypoint_data)
+        waypoint = Waypoint.add(waypoint_data)
 
-            for trait_data in waypoint_data['traits']:
-                if trait_data['symbol'] == 'MARKETPLACE':
-                    cls.get_add_market(waypoint_symbol)
-                    break
+        if waypoint.waypoint_type == 'JUMP_GATE':
+            cls.get_add_jump_gate(waypoint_symbol)
 
+        if 'MARKETPLACE' in [trait_data['symbol'] for trait_data in waypoint_data['traits']]:
+            cls.get_add_market(waypoint_symbol)
+        if 'SHIPYARD' in [trait_data['symbol'] for trait_data in waypoint_data['traits']]:
+            pass
+            
+
+        if waypoint_data.get('chart'):
             agent_symbol = waypoint_data['chart']['submittedBy']
             if agent_symbol in [symbol for symbol, _ in FACTION_SYMBOLS]:
                 chart_agent = Agent.objects.get(symbol=f'{agent_symbol}-agent')
             else:
                 chart_agent = cls.get_add_public_agent(waypoint_data['chart']['submittedBy'])
             Chart.add(waypoint, chart_agent, waypoint_data['chart']['submittedOn'])
-            return waypoint
-        else:
-            waypoint = Waypoint.add(waypoint_data)
-            for trait_data in waypoint_data['traits']:
-                if trait_data['symbol'] == 'MARKETPLACE':
-                    cls.get_add_market(waypoint_symbol)
-                    break
-            return waypoint
+        return waypoint
+
 
     @classmethod
     def get_add_public_agent(cls, agent_symbol):
@@ -169,7 +211,7 @@ class SpaceTradersAPI:
         waypoint = Waypoint.objects.get(symbol=headquarters_symbol)
         faction = Faction.objects.get(symbol=agent_data['startingFaction'])
         return Agent.add(agent_data, waypoint, faction)
-    
+
     def get_add_contract(self, contract_id):
         contract_data = self.get_token(f'my/contracts/{contract_id}')['data']
         contract = self.add_contract(contract_data)
@@ -182,13 +224,13 @@ class SpaceTradersAPI:
             TradeGood.add({'symbol':deliver_data['tradeSymbol'], 'name':None, 'description':None})
         contract = Contract.add(contract_data, self.agent, faction)
         return contract
-    
+
     def get_add_all_contracts(self):
         contracts_data = self.get_token('my/contracts')['data']
         for contract_data in contracts_data:
             self.add_contract(contract_data)
             return Contract.objects.filter(agent=self.agent)
-    
+
     def contract_accept(self, contract_id):
         response = self.post_token(f'my/contracts/{contract_id}/accept', {})
         if response:
@@ -252,6 +294,19 @@ class SpaceTradersAPI:
         return market
 
     @classmethod
+    def get_add_jump_gate(cls, jump_gate_symbol):
+        system_symbol = get_sector_system_waypoint(jump_gate_symbol)['system']
+        waypoint = Waypoint.objects.get(symbol=jump_gate_symbol)
+        jump_gate_data = cls.get_no_token(f'systems/{system_symbol}/waypoints/{jump_gate_symbol}/jump-gate')['data']
+        for destination_symbol in jump_gate_data['connections']:
+            print(f'Adding {destination_symbol} as {jump_gate_symbol} jump gate destination.')
+            cls.get_add_system(destination_symbol, add_jump_gates=False)
+            sleep(0.5)
+            destination = Waypoint.objects.get(symbol=destination_symbol)
+            jump_gate = JumpGate.add(waypoint, destination)
+        return jump_gate
+
+    @classmethod
     def populate_factions(cls):
         url = "https://api.spacetraders.io/v2/factions"
         querystring = {"limit": "20"}
@@ -281,6 +336,7 @@ class SpaceTradersAPI:
                 headquarters_symbol = faction_data['headquarters']
                 headquarters_system_symbol = get_sector_system_waypoint(headquarters_symbol)['system']
                 cls.get_add_system(headquarters_system_symbol)
+                sleep(0.5)
                 headquarters = System.objects.get(symbol=headquarters_symbol)
                 faction.headquarters = headquarters
                 faction.save()

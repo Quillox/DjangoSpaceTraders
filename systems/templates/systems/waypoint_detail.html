@@ -13,14 +13,16 @@
     </tr>
     <tr>
         <th>System:</th>
-        <td><a href="{% url 'systems:detail' waypoint.system.symbol %}">{{ waypoint.system.symbol }}</a> - {{ waypoint.system.system_type }}</td>
+        <td><a href="{% url 'systems:detail' waypoint.system.symbol %}">{{ waypoint.system.symbol }}</a> - {{
+            waypoint.system.system_type }}</td>
     </tr>
     <tr>
         <th>Factions:</th>
         <td>
             <ul>
                 {% for faction in waypoint.factions.all %}
-                <li><a href="{% url 'factions:detail' faction.symbol %}">{{ faction.symbol }}</a> - {{ faction.name }}</li>
+                <li><a href="{% url 'factions:detail' faction.symbol %}">{{ faction.symbol }}</a> - {{ faction.name }}
+                </li>
                 {% endfor %}
             </ul>
         </td>
@@ -37,7 +39,7 @@
     </tr>
 </table>
 
-{% if 'MARKETPLACE' in waypoint.traits.all %}
+{% if waypoint.market %}
 <h3>Marketplace</h3>
 <form method="post">
     {% csrf_token %}
@@ -52,27 +54,29 @@
 <table>
     <thead>
         <tr>
-            <th>Trade Good</th>
-            <th>Trade Type</th>
-            <th>Volume</th>
-            <th>Supply</th>
-            <th>Activity</th>
-            <th>Purchase Price</th>
-            <th>Sell Price</th>
+            <th>Exports</th>
+            <th>Imports</th>
+            <th>Exchanges</th>
         </tr>
     </thead>
     <tbody>
-        {% for link in waypoint.market.markettradegoodlink_set.all %}
         <tr>
-            <td>{{ link.trade_good }}</td>
-            <td>{{ link.trade_type }}</td>
-            <td>{{ link.volume }}</td>
-            <td>{{ link.supply }}</td>
-            <td>{{ link.activity }}</td>
-            <td>{{ link.purchase_price }}</td>
-            <td>{{ link.sell_price }}</td>
+            <td>
+                {% for export in waypoint.market.exports.all %}
+                <li>{{ export }}</li>
+                {% endfor %}
+            </td>
+            <td>
+                {% for import in waypoint.market.imports.all %}
+                <li>{{ import }}</li>
+                {% endfor %}
+            </td>
+            <td>
+                {% for exchange in waypoint.market.exchanges.all %}
+                <li>{{ exchange }}</li>
+                {% endfor %}
+            </td>
         </tr>
-        {% endfor %}
     </tbody>
 </table>
 {% endif %}

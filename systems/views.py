@@ -19,6 +19,21 @@ class DetailView(generic.DetailView):
     model = System
     template_name = 'systems/detail.html'
 
+    def post(self, request, *args, **kwargs):
+        if request.POST.get('update_system'):
+            print(f'Updating system {request.POST.get("system_symbol")}...')
+            system = SpaceTradersAPI.system_deep_get(request.POST.get('system_symbol'))
+            messages.success(request, f'System {system} successfully updated!')
+            return redirect('systems:detail', pk=system.pk)
+
+
+class WaypointIndexView(generic.ListView):
+    template_name = 'systems/waypoint_index.html'
+    context_object_name = 'waypoint_list'
+
+
+    def get_queryset(self):
+        return Waypoint.objects.filter(system__symbol=self.kwargs['system_symbol']).order_by('waypoint_type')
 
 class WaypointDetailView(generic.DetailView):
     model = Waypoint

@@ -408,7 +408,9 @@ class Waypoint(models.Model):
         related_name='waypoints'
     )
     is_under_construction = models.BooleanField(
-        default=False
+        default=False,
+        null=True,
+        blank=True
     )
 
     def __str__(self) -> str:
@@ -427,6 +429,10 @@ class Waypoint(models.Model):
             faction = Faction.objects.get(symbol=waypoint_data['faction']['symbol'])
         else:
             faction = None
+        if waypoint_data.get('isUnderConstruction'):
+            is_under_construction = waypoint_data['isUnderConstruction']
+        else:
+            is_under_construction = None
         waypoint, created = cls.objects.update_or_create(
             symbol=waypoint_data['symbol'],
             defaults={
@@ -437,16 +443,16 @@ class Waypoint(models.Model):
                 'y': waypoint_data['y'],
                 'orbits': parent_waypoint,
                 'faction': faction,
-                'is_under_construction': waypoint_data['isUnderConstruction']
+                'is_under_construction': is_under_construction
             }
         )
-        for trait in waypoint_data.get('traits'):
+        for trait in waypoint_data.get('traits', []):
             if trait:
                 waypoint_trait = WaypointTrait.add(trait)
                 WaypointTraitLink.add(waypoint, waypoint_trait)
             else:
                 continue
-        for modifier in waypoint_data.get('modifiers'):
+        for modifier in waypoint_data.get('modifiers', []):
             if modifier:
                 waypoint_modifier = WaypointModifier.add(modifier)
                 WaypointModifierLink.add(waypoint, waypoint_modifier)
@@ -596,10 +602,11 @@ class Chart(models.Model):
 
 
 class Market(models.Model):
-    symbol = models.OneToOneField(
+    waypoint = models.OneToOneField(
         Waypoint,
         on_delete=models.CASCADE,
-        related_name='market'
+        related_name='market',
+        primary_key=True
     )
     exports = models.ManyToManyField(
         TradeGood,
@@ -630,9 +637,9 @@ class Market(models.Model):
     @classmethod
     def add(cls, market_data):
         market, created = cls.objects.update_or_create(
-            symbol=Waypoint.objects.get(symbol=market_data['symbol']),
+            waypoint=Waypoint.objects.get(symbol=market_data['symbol']),
             defaults={
-                'symbol': Waypoint.objects.get(symbol=market_data['symbol'])
+                'waypoint': Waypoint.objects.get(symbol=market_data['symbol'])
             }
         )
         for trade_good_data in market_data.get('exports', []):
@@ -660,7 +667,7 @@ class Market(models.Model):
                 MarketTransaction.add(transaction_data, market, ship, trade_good)
             else:
                 continue
-        print(f'\t\tMarket {market.symbol} added to the database.')
+        print(f'\t\tMarket {market.waypoint} added to the database.')
         return market
 
 
@@ -845,25 +852,27 @@ class MarketTransaction(models.Model):
         return market_transaction
 
 
-class JumpGateLink(models.Model):
-    jump_gate = models.ForeignKey(
+class JumpGate(models.Model):
+    origin = models.ForeignKey(
         Waypoint,
         on_delete=models.CASCADE,
-        related_name='jump_gate_link'
+        related_name='jump_gate_destinations',
     )
     destination = models.ForeignKey(
         Waypoint,
         on_delete=models.CASCADE,
+        related_name='jump_gate_origins',
     )
 
     @classmethod
-    def add(cls, jump_gate, destination):
-        jump_gate_link, created = cls.objects.update_or_create(
-            jump_gate=jump_gate,
+    def add(cls, waypoint, destination):
+        jump_gate, created = cls.objects.update_or_create(
+            origin=waypoint,
             destination=destination,
             defaults={
-                'jump_gate': jump_gate,
+                'origin': waypoint,
                 'destination': destination
             }
         )
-        return jump_gate_link
+        print(f'Jump gate {jump_gate.origin} to {jump_gate.destination} added to the database.')
+        return jump_gate
