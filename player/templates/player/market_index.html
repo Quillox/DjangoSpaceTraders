@@ -1,0 +1,17 @@
+{% extends 'base_player.html' %}
+
+{% block title %}Markets{% endblock %}
+
+{% block content %}
+
+{% if market_list %}
+    <ul>
+    {% for market in market_list %}
+        <li><a href="{% url 'systems:waypoint_detail' system_symbol=market.waypoint.system.symbol pk=market.waypoint.pk %}">{{ market }}</a></li>
+    {% endfor %}
+    </ul>
+{% else %}
+    <p>No markets are available.</p>
+{% endif %}
+
+{% endblock %}

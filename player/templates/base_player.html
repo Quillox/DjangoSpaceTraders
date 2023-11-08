@@ -9,6 +9,7 @@
         {% if player.is_authenticated %}
         <li><a href="{% url 'agents:detail' player.agent.symbol %}">My Agent</a></li>
         {% endif %}
+        <li><a href="{% url 'player:market_index' %}">Markets</a></li>
     </ul>
 </aside>
 {% endblock %}

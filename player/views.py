@@ -7,6 +7,7 @@ from django.views import generic
 from .api import SpaceTradersAPI
 
 from .models import Player
+from systems.models import Market
 
 class HomeView(generic.ListView):
     model = Player
@@ -45,3 +46,12 @@ class HomeView(generic.ListView):
             messages.success(request, f'Updated {len(fleet)} ships in {request.user.agent.symbol}\'s fleet!')
             return redirect('fleet:index')
         return super().get(request, *args, **kwargs)
+    
+
+class MarketIndexView(generic.ListView):
+    template_name = 'player/market_index.html'
+    context_object_name = 'market_list'
+
+    def get_queryset(self):
+        return Market.objects.all().order_by('pk')
+
