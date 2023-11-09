@@ -5,11 +5,14 @@
 {% block sidebar %}
 <aside>
     <ul>
-        <li><a href="{% url 'player:home' %}">Home</a></li>
         {% if player.is_authenticated %}
         <li><a href="{% url 'agents:detail' player.agent.symbol %}">My Agent</a></li>
         {% endif %}
+        <li><a href="{% url 'player:home' %}">Home</a></li>
         <li><a href="{% url 'player:market_index' %}">Markets</a></li>
+        <li><a href="{% url 'player:shipyard_index' %}">Shipyards</a></li>
+        <li><a href="{% url 'player:jump_gate_index' %}">Jump Gates</a></li>
+        <li><a href="{% url 'player:construction_site_index' %}">Construction Sites</a></li>
     </ul>
 </aside>
 {% endblock %}

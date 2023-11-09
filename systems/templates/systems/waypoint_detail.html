@@ -39,6 +39,14 @@
     </tr>
 </table>
 
+<form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="update_waypoint" value="true">
+    <input type="hidden" name="waypoint_symbol" value="{{ waypoint.pk }}">
+    <label for="update_waypoint">Update Waypoint:</label>
+    <input type="submit" value="Update">
+</form>
+
 {% if waypoint.market %}
 <h3>Marketplace</h3>
 <form method="post">

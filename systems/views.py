@@ -45,4 +45,9 @@ class WaypointDetailView(generic.DetailView):
             market = SpaceTradersAPI.get_add_market(request.POST.get('market_symbol'))
             messages.success(request, f'Market {market} successfully updated!')
             return redirect('systems:waypoint_detail', pk=market.pk)
+        elif request.POST.get('update_waypoint'):
+            print(f'Updating waypoint {request.POST.get("waypoint_id")}...')
+            waypoint = SpaceTradersAPI.add_waypoint(request.POST.get('waypoint_id'))
+            messages.success(request, f'Waypoint {waypoint} successfully updated!')
+            return redirect('systems:waypoint_detail', pk=waypoint.pk)
         return super().get(request, *args, **kwargs)

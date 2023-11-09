@@ -2,10 +2,10 @@ import requests
 from time import sleep
 
 from factions.models import Faction, FACTION_SYMBOLS
-from systems.models import System, TradeGood, Waypoint, Chart, Market, JumpGate
+from systems.models import System, TradeGood, Waypoint, Chart, Market, JumpGate, ConstructionSite
 from agents.models import Agent
 from contracts.models import Contract
-from fleet.models import Ship, ShipRegistration, ShipNav, ShipNavRoute, ShipCrew, Frame, Reactor, Engine, Module, Mount
+from fleet.models import Ship, ShipRegistration, ShipNav, ShipNavRoute, ShipCrew, Frame, Reactor, Engine, Module, Mount, Shipyard
 from player.models import Player
 
 
@@ -103,7 +103,7 @@ class SpaceTradersAPI:
         return system
     
     @classmethod
-    def system_deep_get(cls, system_symbol, add_jump_gates=True):
+    def system_deep_get(cls, system_symbol, add_jump_gates=False):
         system_symbol = get_sector_system_waypoint(system_symbol)['system']
         system_data = cls.get_no_token(f'systems/{system_symbol}')['data']
         system = System.add(system_data)
@@ -132,11 +132,27 @@ class SpaceTradersAPI:
             if waypoint.waypoint_type == 'JUMP_GATE':
                 if cls.get_no_token(f'systems/{system_symbol}/waypoints/{waypoint.symbol}/jump-gate'):
                     cls.get_add_jump_gate(waypoint.symbol)
+        
+        if waypoint.is_under_construction:
+            construction_site_data = cls.get_no_token(f'systems/{system_symbol}/waypoints/{waypoint.symbol}/construction')
+            if construction_site_data:
+                construction_site_data = construction_site_data['data']
+                for material in construction_site_data['materials']:
+                    trade_good = TradeGood.add({'symbol':material['tradeSymbol'], 'name':None, 'description':None})
+                    required = material['required']
+                    fulfilled = material['fulfilled']
+                    ConstructionSite.add(waypoint, trade_good, required, fulfilled)
+                waypoint.is_under_construction = construction_site_data['isComplete']
+                waypoint.save()
 
         if waypoint_data.get('traits'):
-            if 'MARKETPLACE' in [trait_data['symbol'] for trait_data in waypoint_data['traits']]:
+            waypoint_traits = [trait_data['symbol'] for trait_data in waypoint_data['traits']]
+            # TODO decide where to put handling of the api request answer being None
+            if 'MARKETPLACE' in waypoint_traits:
                 if cls.get_no_token(f'systems/{system_symbol}/waypoints/{waypoint.symbol}/market'):
                     cls.get_add_market(waypoint.symbol)
+            if 'SHIPYARD' in waypoint_traits:
+                cls.get_add_shipyard_no_token(waypoint.symbol)
 
         if waypoint_data.get('chart'):
             agent_symbol = waypoint_data['chart']['submittedBy']
@@ -190,7 +206,6 @@ class SpaceTradersAPI:
                 chart_agent = cls.get_add_public_agent(waypoint_data['chart']['submittedBy'])
             Chart.add(waypoint, chart_agent, waypoint_data['chart']['submittedOn'])
         return waypoint
-
 
     @classmethod
     def get_add_public_agent(cls, agent_symbol):
@@ -305,6 +320,19 @@ class SpaceTradersAPI:
             destination = Waypoint.objects.get(symbol=destination_symbol)
             jump_gate = JumpGate.add(waypoint, destination)
         return jump_gate
+
+    @classmethod
+    def get_add_shipyard_no_token(cls, shipyard_symbol):
+        system_symbol = get_sector_system_waypoint(shipyard_symbol)['system']
+        shipyard_data = cls.get_no_token(f'systems/{system_symbol}/waypoints/{shipyard_symbol}/shipyard')
+        if not shipyard_data:
+            print(f'Error: {shipyard_symbol} is not scannable!')
+            return None
+        cls.get_add_system(system_symbol)
+        waypoint = Waypoint.objects.get(symbol=shipyard_symbol)
+        shipyard = Shipyard.add(shipyard_data, waypoint)
+        return shipyard
+
 
     @classmethod
     def populate_factions(cls):

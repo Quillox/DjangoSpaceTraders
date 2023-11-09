@@ -877,26 +877,29 @@ class Shipyard(models.Model):
 
     @classmethod
     def add(cls, shipyard_data, waypoint):
+        if not shipyard_data.get('modificationsFee'):
+            modifications_fee = -1
         shipyard, created = cls.objects.update_or_create(
             waypoint=waypoint,
             defaults={
                 'waypoint': waypoint,
-                'modifications_fee': shipyard_data['modificationsFee']
+                'modifications_fee': modifications_fee
             }
         )
 
         # TODO look into `bulk_create`
-        for shipyard_ship_data in shipyard_data['ships']:
-            shipyard_ship = ShipyardShip.add(
-                shipyard_ship_data,
-                Frame.add(shipyard_ship_data['frame']),
-                Reactor.add(shipyard_ship_data['reactor']),
-                Engine.add(shipyard_ship_data['engine']),
-                [Module.add(module) for module in shipyard_ship_data['modules']],
-                [Mount.add(mount, shipyard_ship_data['deposits']) for mount in shipyard_ship_data['mounts']],
-                ShipCrew.add(shipyard_ship_data['crew'])
-            )
-            ShipyardShipLink.add(shipyard_ship_data, shipyard, shipyard_ship)
+        if shipyard_data.get('ships'):
+            for shipyard_ship_data in shipyard_data['ships']:
+                shipyard_ship = ShipyardShip.add(
+                    shipyard_ship_data,
+                    Frame.add(shipyard_ship_data['frame']),
+                    Reactor.add(shipyard_ship_data['reactor']),
+                    Engine.add(shipyard_ship_data['engine']),
+                    [Module.add(module) for module in shipyard_ship_data['modules']],
+                    [Mount.add(mount, shipyard_ship_data['deposits']) for mount in shipyard_ship_data['mounts']],
+                    ShipCrew.add(shipyard_ship_data['crew'])
+                )
+                ShipyardShipLink.add(shipyard_ship_data, shipyard, shipyard_ship)
         return shipyard
 
 

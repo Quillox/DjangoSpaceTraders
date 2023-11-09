@@ -278,7 +278,7 @@ class TradeGood(models.Model):
         blank=True
     )
 
-
+    # TODO work out how to update the trade goods table without overwriting the name and description with None
     @classmethod
     def add(cls, trade_good_data):
         trade_good, created = cls.objects.update_or_create(
@@ -458,8 +458,44 @@ class Waypoint(models.Model):
                 WaypointModifierLink.add(waypoint, waypoint_modifier)
             else:
                 continue
-        print(f'\tWaypoint {waypoint.symbol} added to the database.')
+        if created:
+            print(f'\tWaypoint {waypoint.symbol} added to the database.')
+        else:
+            print(f'\tWaypoint {waypoint.symbol} updated in the database.')
         return waypoint
+
+
+class ConstructionSite(models.Model):
+    waypoint = models.ForeignKey(
+        Waypoint,
+        on_delete=models.CASCADE,
+        related_name='construction_site'
+    )
+    TradeGood = models.ForeignKey(
+        TradeGood,
+        on_delete=models.CASCADE,
+        related_name='construction_site'
+    )
+    required = models.IntegerField(
+        verbose_name="the number of units of the trade good required to complete construction of the waypoint.",
+    )
+    fulfilled = models.IntegerField(
+        verbose_name="the number of units of the trade good that have been delivered to the construction site.",
+    )
+
+    @classmethod
+    def add(cls, waypoint, trade_good, required, fulfilled):
+        construction_site, created = cls.objects.update_or_create(
+            waypoint=waypoint,
+            TradeGood=trade_good,
+            defaults={
+                'waypoint': waypoint,
+                'TradeGood': trade_good,
+                'required': required,
+                'fulfilled': fulfilled
+            }
+        )
+        return construction_site
 
 
 class WaypointTrait(models.Model):
@@ -667,7 +703,10 @@ class Market(models.Model):
                 MarketTransaction.add(transaction_data, market, ship, trade_good)
             else:
                 continue
-        print(f'\t\tMarket {market.waypoint} added to the database.')
+        if created:
+            print(f'\t\tMarket {market.waypoint} added to the database.')
+        else:
+            print(f'\t\tMarket {market.waypoint} updated in the database.')
         return market
 
 
@@ -874,5 +913,8 @@ class JumpGate(models.Model):
                 'destination': destination
             }
         )
-        print(f'Jump gate {jump_gate.origin} to {jump_gate.destination} added to the database.')
+        if created:
+            print(f'Jump gate {jump_gate.origin} to {jump_gate.destination} added to the database.')
+        else:
+            print(f'Jump gate {jump_gate.origin} to {jump_gate.destination} updated in the database.')
         return jump_gate
