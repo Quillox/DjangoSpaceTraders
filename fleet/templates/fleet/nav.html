@@ -1,0 +1,43 @@
+{% extends 'base_fleet.html' %}
+
+{% block content %}
+<h2>Ship Nav</h2>
+<table>
+    <thead>
+        <tr>
+            <th>Current System</th>
+            <th>Waypoint</th>
+            <th>Status</th>
+            <th>Flight Mode</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><a href="{% url 'systems:detail' shipnav.current_system.pk %}">{{ shipnav.current_system }}</a></td>
+            <td><a href="{% url 'systems:waypoint_detail' system_symbol=shipnav.waypoint.system.symbol pk=shipnav.waypoint.pk %}">{{ shipnav.waypoint }}</a></td>
+            <td>{{ shipnav.status }}</td>
+            <td>{{ shipnav.flight_mode }}</td>
+        </tr>
+    </tbody>
+</table>
+
+<h2>Route Info</h2>
+<table>
+    <thead>
+        <tr>
+            <th>Destination</th>
+            <th>Origin</th>
+            <th>Departure Time</th>
+            <th>Arrival Time</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><a href="{% url 'systems:waypoint_detail' system_symbol=shipnav.route.destination.system.symbol pk=shipnav.route.destination.pk %}">{{ shipnav.route.destination }}</a></td>
+            <td><a href="{% url 'systems:waypoint_detail' system_symbol=shipnav.route.origin.system.symbol pk=shipnav.route.origin.pk %}">{{ shipnav.route.origin }}</a></td>
+            <td>{{ shipnav.route.departure_time }}</td>
+            <td>{{ shipnav.route.arrival_time }}</td>
+        </tr>
+    </tbody>
+</table>
+{% endblock %}

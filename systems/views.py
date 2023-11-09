@@ -1,11 +1,12 @@
+from django import forms
 from django.shortcuts import render
 from django.views import generic
 from django.contrib import messages
-from django.shortcuts import redirect
+from django.shortcuts import redirect, get_object_or_404
 
 from .models import System, Waypoint, Market, JumpGate
 from player.api import SpaceTradersAPI
-from fleet.models import Shipyard
+from fleet.models import Shipyard, ShipyardShip, Ship
 
 
 class IndexView(generic.ListView):
@@ -36,16 +37,40 @@ class WaypointIndexView(generic.ListView):
     def get_queryset(self):
         return Waypoint.objects.filter(system__symbol=self.kwargs['system_symbol']).order_by('waypoint_type')
 
+
+class UpdateWaypointForm(forms.Form):
+    update_waypoint = forms.BooleanField()
+
+class NavigateShipForm(forms.ModelForm):
+    class Meta:
+        model = Ship
+        fields = ['symbol']
+
+
 class WaypointDetailView(generic.DetailView):
     model = Waypoint
     template_name = 'systems/waypoint_detail.html'
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['fleet'] = Ship.objects.filter(agent=self.request.user.agent.pk).all()
+        return context
+
     def post(self, request, *args, **kwargs):
-        if request.POST.get('update_waypoint'):
-            print(f'Updating waypoint {request.POST.get("waypoint_symbol")}...')
-            waypoint = SpaceTradersAPI.update_waypoint(request.POST.get('waypoint_symbol'))
+        waypoint_symbol = self.get_object().symbol
+        update_form = UpdateWaypointForm(request.POST, prefix='update')
+        navigate_form = NavigateShipForm(request.POST, prefix='navigate')
+
+        if update_form.is_valid():
+            print(f'Updating waypoint {waypoint_symbol}...')
+            waypoint = SpaceTradersAPI.update_waypoint(waypoint_symbol)
             messages.success(request, f'Waypoint {waypoint} successfully updated!')
             return redirect('systems:waypoint_detail', system_symbol=waypoint.system.symbol, pk=waypoint.pk)
+
+        elif navigate_form.is_valid():
+            print('jam')
+            print(f'Navigating ship {navigate_form.cleaned_data["ship_id"]} to waypoint {waypoint_symbol}...')
+
         return super().get(request, *args, **kwargs)
 
 class MarketDetailView(generic.DetailView):
@@ -81,3 +106,10 @@ class ShipyardDetailView(generic.DetailView):
             return redirect('systems:shipyard_detail', system_symbol=shipyard.waypoint.system.symbol, pk=shipyard.pk)
         return super().get(request, *args, **kwargs)
 
+
+class ShipyardShipDetailView(generic.DetailView):
+    model = ShipyardShip
+    template_name = 'systems/shipyard_ship_detail.html'
+
+    def get_object(self):
+        return get_object_or_404(ShipyardShip, pk=self.kwargs['ship_id'])

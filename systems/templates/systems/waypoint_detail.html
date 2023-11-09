@@ -41,10 +41,21 @@
 
 <form method="post">
     {% csrf_token %}
-    <input type="hidden" name="update_waypoint" value="true">
-    <input type="hidden" name="waypoint_symbol" value="{{ waypoint.pk }}">
+    <input type="hidden" name="update-update_waypoint" value="true">
     <label for="update_waypoint">Update Waypoint:</label>
     <input type="submit" value="Update">
+</form>
+
+<form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="navigate-navigate" value="true">
+    <label for="fleet">Fleet:</label>
+    <select name="navigate-ship_id" id="fleet">
+        {% for ship in fleet %}
+        <option value="{{ ship.pk }}">{{ ship.pk }}</option>
+        {% endfor %}
+    </select>
+    <input type="submit" value="Navigate">
 </form>
 
 {% if waypoint.market %}

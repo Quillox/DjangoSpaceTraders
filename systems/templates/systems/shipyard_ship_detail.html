@@ -1,0 +1,65 @@
+{% extends 'base_systems.html' %}
+
+{% block content %}
+<table>
+    <tr>
+        <th>Ship Type:</th>
+        <td>{{ shipyardship.ship_type }}</td>
+    </tr>
+    <tr>
+        <th>Name:</th>
+        <td>{{ shipyardship.name }}</td>
+    </tr>
+    <tr>
+        <th>Description:</th>
+        <td>{{ shipyardship.description }}</td>
+    </tr>
+    <tr>
+        <th>Frame:</th>
+        <td>{{ shipyardship.frame }}</td>
+    </tr>
+    <tr>
+        <th>Reactor:</th>
+        <td>{{ shipyardship.reactor }}</td>
+    </tr>
+    <tr>
+        <th>Engine:</th>
+        <td>{{ shipyardship.engine }}</td>
+    </tr>
+    <tr>
+        <th>Crew Required:</th>
+        <td>{{ shipyardship.crew_required }}</td>
+    </tr>
+    <tr>
+        <th>Crew Capacity:</th>
+        <td>{{ shipyardship.crew_capacity }}</td>
+    </tr>
+    <tr>
+        <th>Modules:</th>
+        <td>
+            <ul>
+                {% for module in shipyardship.modules.all %}
+                <li>{{ module }}</li>
+                {% endfor %}
+            </ul>
+        </td>
+    </tr>
+    <tr>
+        <th>Mounts:</th>
+        <td>
+            <ul>
+                {% for mount in shipyardship.mounts.all %}
+                <li>{{ mount }}</li>
+                {% if mount.deposits_link %}
+                <ul>
+                    {% for deposit in mount.deposits_link.all %}
+                    <li>{{ deposit }}</li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+                {% endfor %}
+            </ul>
+        </td>
+    </tr>
+</table>
+{% endblock %}

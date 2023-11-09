@@ -5,14 +5,58 @@
 <h2>Shipyard details</h2>
 
 <h3>Available Ships</h3>
-<ul>
-    {% for ship in shipyard.ships.all %}
-    <li>{{ ship }}</li>
-    {% endfor %}
-</ul>
+<table>
+    <thead>
+        <tr>
+            <th>Ship</th>
+            <th>Purchase Price</th>
+            <th>Supply</th>
+            <th>Activity</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for link in shipyard.ships_for_sale.all %}
+        <tr>
+            <td>
+                <a href="{% url 'systems:shipyard_ship_detail' system_symbol=shipyard.waypoint.system.symbol pk=shipyard.pk ship_id=link.shipyard_ship.pk %}">
+                    {{ link.shipyard_ship.name }}
+                </a>
+            </td>
+            <td>{{ link.purchase_price }}</td>
+            <td>{{ link.supply }}</td>
+            <td>{{ link.activity }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
 
 <h3>Modification Fee</h3>
 <p>{{ shipyard.modifications_fee }}</p>
+
+<h3>Transactions</h3>
+<table>
+    <thead>
+        <tr>
+            <th>Ship</th>
+            <th>Price</th>
+            <th>Agent Symbol</th>
+            <th>Timestamp</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for transaction in shipyard.transactions.all %}
+        <tr>
+            <td>{{ transaction.ship_type }}</td>
+            <td>{{ transaction.price }}</td>
+            <td>{{ transaction.agent_symbol }}</td>
+            <td>{{ transaction.timestamp }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+
+<h3>Update Shipyard</h3>
 
 <form method="post">
     {% csrf_token %}

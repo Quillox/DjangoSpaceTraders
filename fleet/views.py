@@ -1,7 +1,7 @@
 from django.shortcuts import render
 from django.views import generic
 
-from .models import Ship
+from .models import Ship, ShipNav
 
 
 class IndexView(generic.ListView):
@@ -14,4 +14,9 @@ class IndexView(generic.ListView):
 class DetailView(generic.DetailView):
     model = Ship
     template_name = 'fleet/detail.html'
+
+
+class NavView(generic.DetailView):
+    model = ShipNav
+    template_name = 'fleet/nav.html'
 

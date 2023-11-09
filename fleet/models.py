@@ -344,7 +344,9 @@ class ShipComponent(TradeGood):
 class Frame(ShipComponent):
     condition = models.IntegerField(
         validators=[MinValueValidator(0), MaxValueValidator(100)],
-        verbose_name="Condition is a range of 0 to 100 where 0 is completely worn out and 100 is brand new."
+        verbose_name="Condition is a range of 0 to 100 where 0 is completely worn out and 100 is brand new.",
+        null=True,
+        blank=True
     )
     module_slots = models.IntegerField(
         verbose_name='the amount of slots that can be dedicated to modules installed in the ship. Each installed module take up a number of slots, and once there are no more slots, no new modules can be installed.',
@@ -367,7 +369,7 @@ class Frame(ShipComponent):
                 'symbol': frame_data['symbol'],
                 'name': frame_data['name'],
                 'description': frame_data['description'],
-                'condition': frame_data['condition'],
+                'condition': frame_data.get('condition'),
                 'module_slots': frame_data['moduleSlots'],
                 'mounting_points': frame_data['mountingPoints'],
                 'fuel_capacity': frame_data['fuelCapacity'],
@@ -382,7 +384,9 @@ class Frame(ShipComponent):
 class Reactor(ShipComponent):
     condition = models.IntegerField(
         validators=[MinValueValidator(0), MaxValueValidator(100)],
-        verbose_name='condition is a range of 0 to 100 where 0 is completely worn out and 100 is brand new.'
+        verbose_name='condition is a range of 0 to 100 where 0 is completely worn out and 100 is brand new.',
+        null=True,
+        blank=True
     )
     power_output = models.IntegerField(
         verbose_name='the amount of power provided by this reactor. The more power a reactor provides to the ship, the lower the cooldown it gets when using a module or mount that taxes the ship\'s power.',
@@ -397,7 +401,7 @@ class Reactor(ShipComponent):
                 'symbol': reactor_data['symbol'],
                 'name': reactor_data['name'],
                 'description': reactor_data['description'],
-                'condition': reactor_data['condition'],
+                'condition': reactor_data.get('condition'),
                 'power_output': reactor_data['powerOutput'],
                 'power': reactor_data['requirements'].get('power'),
                 'crew': reactor_data['requirements'].get('crew'),
@@ -410,7 +414,9 @@ class Reactor(ShipComponent):
 class Engine(ShipComponent):
     condition = models.IntegerField(
         validators=[MinValueValidator(0), MaxValueValidator(100)],
-        verbose_name='condition is a range of 0 to 100 where 0 is completely worn out and 100 is brand new.'
+        verbose_name='condition is a range of 0 to 100 where 0 is completely worn out and 100 is brand new.',
+        null=True,
+        blank=True
     )
     speed = models.IntegerField(
         verbose_name='The speed stat of this engine. The higher the speed, the faster a ship can travel from one point to another. Reduces the time of arrival when navigating the ship.',
@@ -425,7 +431,7 @@ class Engine(ShipComponent):
                 'symbol': engine_data['symbol'],
                 'name': engine_data['name'],
                 'description': engine_data['description'],
-                'condition': engine_data['condition'],
+                'condition': engine_data.get('condition'),
                 'speed': engine_data['speed'],
                 'power': engine_data['requirements'].get('power'),
                 'crew': engine_data['requirements'].get('crew'),
@@ -477,7 +483,8 @@ class Mount(ShipComponent):
          'systems.TradeGood',
         through='MountDepositLink',
         related_name='mounts',
-        choices=SHIP_MOUNT_DEPOSIT_SYMBOL
+        choices=SHIP_MOUNT_DEPOSIT_SYMBOL,
+        verbose_name="mounts that have this value denote what goods can be produced from using the mount."
     )
 
     @classmethod
@@ -774,13 +781,15 @@ class ShipyardShip(models.Model):
         through='ShipyardShipMountLink',
         related_name='shipyard_ships'
     )
-    crew = models.ForeignKey(
-        ShipCrew,
-        on_delete=models.CASCADE,
+    crew_required = models.IntegerField(
+        verbose_name="the minimum number of crew members required to maintain the ship."
+    )
+    crew_capacity = models.IntegerField(
+        verbose_name="the maximum number of crew members the ship can support."
     )
 
     @classmethod
-    def add(cls, shipyard_ship_data, frame, reactor, engine, modules: List[Module], mounts: List[Mount], crew):
+    def add(cls, shipyard_ship_data, frame, reactor, engine, modules: List[Module], mounts: List[Mount]):
         shipyard_ship, created = cls.objects.update_or_create(
             ship_type=shipyard_ship_data['type'],
             name=shipyard_ship_data['name'],
@@ -788,7 +797,8 @@ class ShipyardShip(models.Model):
             frame=frame,
             reactor=reactor,
             engine=engine,
-            crew=crew,
+            crew_required=shipyard_ship_data['crew']['required'],
+            crew_capacity=shipyard_ship_data['crew']['capacity'],
             defaults={
                 'ship_type': shipyard_ship_data['type'],
                 'name': shipyard_ship_data['name'],
@@ -796,7 +806,8 @@ class ShipyardShip(models.Model):
                 'frame': frame,
                 'reactor': reactor,
                 'engine': engine,
-                'crew': crew
+                'crew_required': shipyard_ship_data['crew']['required'],
+                'crew_capacity': shipyard_ship_data['crew']['capacity']
             }
         )
 
@@ -881,6 +892,8 @@ class Shipyard(models.Model):
     def add(cls, shipyard_data, waypoint):
         if not shipyard_data.get('modificationsFee'):
             modifications_fee = -1
+        else:
+            modifications_fee = shipyard_data['modificationsFee']
         shipyard, created = cls.objects.update_or_create(
             waypoint=waypoint,
             defaults={
@@ -898,11 +911,10 @@ class Shipyard(models.Model):
                     Reactor.add(shipyard_ship_data['reactor']),
                     Engine.add(shipyard_ship_data['engine']),
                     [Module.add(module) for module in shipyard_ship_data['modules']],
-                    [Mount.add(mount, shipyard_ship_data['deposits']) for mount in shipyard_ship_data['mounts']],
-                    ShipCrew.add(shipyard_ship_data['crew'])
+                    [Mount.add(mount, shipyard_ship_data.get('deposits', [])) for mount in shipyard_ship_data['mounts']],
                 )
                 ShipyardShipLink.add(shipyard_ship_data, shipyard, shipyard_ship)
-        
+
         if created:
             print(f'\t\tShipyard {shipyard} added to the database')
         else:
@@ -914,6 +926,7 @@ class ShipyardShipLink(models.Model):
     shipyard = models.ForeignKey(
         Shipyard,
         on_delete=models.CASCADE,
+        related_name='ships_for_sale'
     )
     shipyard_ship = models.ForeignKey(
         ShipyardShip,
@@ -954,12 +967,12 @@ class ShipyardTransaction(models.Model):
         Shipyard,
         verbose_name="the symbol of the waypoint where the transaction took place.",
         on_delete=models.CASCADE,
+        related_name='transactions'
     )
-    ship = models.ForeignKey(
-        # TODO make sure that this is a ship and not shipyard ship
-        Ship,
+    ship_type = models.CharField(
+        max_length=500,
         verbose_name="the symbol of the ship that was the subject of the transaction.",
-        on_delete=models.CASCADE,
+        choices=SHIP_TYPE
     )
     price = models.IntegerField(
         verbose_name='the price of the transaction.',
@@ -973,16 +986,16 @@ class ShipyardTransaction(models.Model):
     timestamp = models.DateTimeField()
 
     @classmethod
-    def add(cls, shipyard_transaction_data, shipyard, ship, agent):
+    def add(cls, shipyard_transaction_data, shipyard, agent):
         shipyard_transaction, created = cls.objects.update_or_create(
             shipyard=shipyard,
-            ship=ship,
+            ship_type=shipyard_transaction_data['shipSymbol'],
             price=shipyard_transaction_data['price'],
             agent_symbol=agent,
             timestamp=shipyard_transaction_data['timestamp'],
             defaults={
                 'shipyard': shipyard,
-                'ship': ship,
+                'ship_type': shipyard_transaction_data['shipSymbol'],
                 'price': shipyard_transaction_data['price'],
                 'agent_symbol': agent,
                 'timestamp': shipyard_transaction_data['timestamp']

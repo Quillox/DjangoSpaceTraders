@@ -5,7 +5,7 @@ from factions.models import Faction, FACTION_SYMBOLS
 from systems.models import System, TradeGood, Waypoint, Chart, Market, JumpGate, ConstructionSite
 from agents.models import Agent
 from contracts.models import Contract
-from fleet.models import Ship, ShipRegistration, ShipNav, ShipNavRoute, ShipCrew, Frame, Reactor, Engine, Module, Mount, Shipyard
+from fleet.models import Ship, ShipRegistration, ShipNav, ShipNavRoute, ShipCrew, Frame, Reactor, Engine, Module, Mount, Shipyard, ShipyardTransaction
 from player.models import Player
 
 
@@ -93,8 +93,11 @@ class SpaceTradersAPI:
 
     @classmethod
     def get_add_system(cls, system_symbol, add_jump_gates=False):
-        sleep(0.5)
         system_symbol = get_sector_system_waypoint(system_symbol)['system']
+        if System.objects.filter(pk=system_symbol).exists():
+            # TODO might need to remove this 
+            return System.objects.get(symbol=system_symbol)
+        sleep(0.5)
         system_data = cls.get_no_token(f'systems/{system_symbol}')['data']
         system = System.add(system_data)
         for waypoint_data in system_data['waypoints']:
@@ -388,10 +391,16 @@ class SpaceTradersAPI:
         if not shipyard_data:
             print(f'Error: {shipyard_symbol} is not scannable!')
             return None
+        else:
+            shipyard_data = shipyard_data['data']
         # TODO I technically should not need to update the system here. But this is safe.
-        self.get_add_system(system_symbol)
+        # self.get_add_system(system_symbol)
         waypoint = Waypoint.objects.get(symbol=shipyard_symbol)
         shipyard = Shipyard.add(shipyard_data, waypoint)
+        if shipyard_data.get('transactions'):
+            for transaction_data in shipyard_data['transactions']:
+                buyer = self.get_add_public_agent(transaction_data['agentSymbol'])
+                shipyard_transaction = ShipyardTransaction.add(transaction_data, shipyard, buyer)
         return shipyard
 
 
