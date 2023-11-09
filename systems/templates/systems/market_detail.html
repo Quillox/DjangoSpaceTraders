@@ -1,0 +1,45 @@
+{% extends "base_systems.html" %}
+
+{% block content %}
+
+<h2>Marketplace</h2>
+
+<h3>Market Data</h3>
+<table>
+    <thead>
+        <tr>
+            <th>Exports</th>
+            <th>Imports</th>
+            <th>Exchanges</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>
+                {% for export in market.exports.all %}
+                <li>{{ export }}</li>
+                {% endfor %}
+            </td>
+            <td>
+                {% for import in market.imports.all %}
+                <li>{{ import }}</li>
+                {% endfor %}
+            </td>
+            <td>
+                {% for exchange in market.exchanges.all %}
+                <li>{{ exchange }}</li>
+                {% endfor %}
+            </td>
+        </tr>
+    </tbody>
+</table>
+
+<form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="update_market" value="true">
+    <input type="hidden" name="market_symbol" value="{{ market.pk }}">
+    <label for="update_market">Update Market:</label>
+    <input type="submit" value="Update">
+</form>
+
+{% endblock %}

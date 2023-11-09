@@ -7,7 +7,8 @@ from django.views import generic
 from .api import SpaceTradersAPI
 
 from .models import Player
-from systems.models import Market
+from systems.models import Market, ConstructionSite, JumpGate
+from fleet.models import Shipyard
 
 class HomeView(generic.ListView):
     model = Player
@@ -55,3 +56,24 @@ class MarketIndexView(generic.ListView):
     def get_queryset(self):
         return Market.objects.all().order_by('pk')
 
+class ConstructionSiteIndexView(generic.ListView):
+    template_name = 'player/construction_site_index.html'
+    context_object_name = 'construction_site_list'
+
+    def get_queryset(self):
+        return ConstructionSite.objects.all().order_by('pk')
+    
+class JumpGateIndexView(generic.ListView):
+    template_name = 'player/jump_gate_index.html'
+    context_object_name = 'jump_gate_list'
+
+    def get_queryset(self):
+        return JumpGate.objects.all().order_by('waypoint')
+
+
+class ShipyardIndexView(generic.ListView):
+    template_name = 'player/shipyard_index.html'
+    context_object_name = 'shipyard_list'
+
+    def get_queryset(self):
+        return Shipyard.objects.all().order_by('pk')

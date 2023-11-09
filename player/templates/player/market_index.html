@@ -7,7 +7,7 @@
 {% if market_list %}
     <ul>
     {% for market in market_list %}
-        <li><a href="{% url 'systems:waypoint_detail' system_symbol=market.waypoint.system.symbol pk=market.waypoint.pk %}">{{ market }}</a></li>
+        <li><a href="{% url 'systems:market_detail' system_symbol=market.waypoint.system.symbol pk=market.waypoint.pk %}">{{ market }}</a></li>
     {% endfor %}
     </ul>
 {% else %}

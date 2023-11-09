@@ -49,46 +49,41 @@
 
 {% if waypoint.market %}
 <h3>Marketplace</h3>
-<form method="post">
-    {% csrf_token %}
-    <input type="hidden" name="update_market" value="true">
-    <input type="hidden" name="market_symbol" value="{{ waypoint.pk }}">
-    <label for="update_market">Update Market:</label>
-    <input type="submit" value="Update">
-</form>
+<a href="{% url 'systems:market_detail' system_symbol=waypoint.system.symbol pk=waypoint.market.pk %}">Market</a>
+{% endif %}
 
-{% if waypoint.market %}
-<h3>Market Data</h3>
+{% if waypoint.shipyard %}
+<h3>Shipyard</h3>
+<a href="{% url 'systems:shipyard_detail' system_symbol=waypoint.system.symbol pk=waypoint.shipyard.pk %}">Shipyard</a>
+{% endif %}
+
+{% if waypoint.waypoint_type == 'JUMP_GATE' %}
+<h3>Jump Gate</h3>
+{% for link in waypoint.jump_gate.all %}
+<li><a href="{% url 'systems:waypoint_detail' system_symbol=link.destination.system.symbol pk=link.destination.pk %}">{{ link.destination }}</a></li>
+{% endfor %}
+{% endif %}
+
+{% if waypoint.construction_site %}
+<h3>Construction Site</h3>
 <table>
     <thead>
         <tr>
-            <th>Exports</th>
-            <th>Imports</th>
-            <th>Exchanges</th>
+            <th>Trade Good</th>
+            <th>Required</th>
+            <th>Fulfilled</th>
         </tr>
     </thead>
     <tbody>
+        {% for construction_site in waypoint.construction_site.all %}
         <tr>
-            <td>
-                {% for export in waypoint.market.exports.all %}
-                <li>{{ export }}</li>
-                {% endfor %}
-            </td>
-            <td>
-                {% for import in waypoint.market.imports.all %}
-                <li>{{ import }}</li>
-                {% endfor %}
-            </td>
-            <td>
-                {% for exchange in waypoint.market.exchanges.all %}
-                <li>{{ exchange }}</li>
-                {% endfor %}
-            </td>
+            <td>{{ construction_site.TradeGood }}</td>
+            <td>{{ construction_site.required }}</td>
+            <td>{{ construction_site.fulfilled }}</td>
         </tr>
+        {% endfor %}
     </tbody>
 </table>
-{% endif %}
-
 {% endif %}
 
 {% endblock %}

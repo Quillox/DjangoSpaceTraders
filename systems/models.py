@@ -281,12 +281,20 @@ class TradeGood(models.Model):
     # TODO work out how to update the trade goods table without overwriting the name and description with None
     @classmethod
     def add(cls, trade_good_data):
+        if trade_good_data.get('name'):
+            name = trade_good_data['name']
+        else:
+            name = None
+        if trade_good_data.get('description'):
+            description = trade_good_data['description']
+        else:
+            description = None
         trade_good, created = cls.objects.update_or_create(
             symbol=trade_good_data['symbol'],
             defaults={
                 'symbol': trade_good_data['symbol'],
-                'name': trade_good_data['name'],
-                'description': trade_good_data['description']
+                'name': name,
+                'description': description
             }
         )
         return trade_good
@@ -464,6 +472,45 @@ class Waypoint(models.Model):
             print(f'\tWaypoint {waypoint.symbol} updated in the database.')
         return waypoint
 
+    def update(self, waypoint_data):
+        # TODO deal with adding chart
+        if waypoint_data.get('orbits'):
+            parent_waypoint = Waypoint.objects.get(
+                symbol=waypoint_data.get('orbits'))
+        else:
+            parent_waypoint = None
+        if waypoint_data.get('faction'):
+            faction = Faction.objects.get(symbol=waypoint_data['faction']['symbol'])
+        else:
+            faction = None
+        if waypoint_data.get('isUnderConstruction'):
+            is_under_construction = waypoint_data['isUnderConstruction']
+        else:
+            is_under_construction = None
+        self.symbol = waypoint_data['symbol']
+        self.system = System.objects.get(symbol=waypoint_data['systemSymbol'])
+        self.waypoint_type = waypoint_data['type']
+        self.x = waypoint_data['x']
+        self.y = waypoint_data['y']
+        self.orbits = parent_waypoint
+        self.faction = faction
+        self.is_under_construction = is_under_construction
+        self.save()
+        for trait in waypoint_data.get('traits', []):
+            if trait:
+                waypoint_trait = WaypointTrait.add(trait)
+                WaypointTraitLink.add(self, waypoint_trait)
+            else:
+                continue
+        for modifier in waypoint_data.get('modifiers', []):
+            if modifier:
+                waypoint_modifier = WaypointModifier.add(modifier)
+                WaypointModifierLink.add(self, waypoint_modifier)
+            else:
+                continue
+        self.save()
+        print(f'\tWaypoint {self.symbol} updated in the database.')
+        return self
 
 class ConstructionSite(models.Model):
     waypoint = models.ForeignKey(
@@ -605,7 +652,7 @@ class WaypointModifierLink(models.Model):
 
 
 class Chart(models.Model):
-    waypoint_symbol = models.OneToOneField(
+    waypoint = models.OneToOneField(
         Waypoint,
         on_delete=models.CASCADE,
         primary_key=True,
@@ -622,14 +669,14 @@ class Chart(models.Model):
     )
 
     def __str__(self):
-        return f'{self.waypoint_symbol.symbol} charted by {self.submitted_by} on {self.submitted_on}'
+        return f'{self.waypoint.symbol} charted by {self.submitted_by} on {self.submitted_on}'
 
     @classmethod
     def add(cls, waypoint, agent, submitted_on):
         chart, created = cls.objects.update_or_create(
-            waypoint_symbol=waypoint,
+            waypoint=waypoint,
             defaults={
-                'waypoint_symbol': waypoint,
+                'waypoint': waypoint,
                 'submitted_by': agent,
                 'submitted_on': submitted_on
             }
@@ -693,7 +740,7 @@ class Market(models.Model):
         for trade_good_data in market_data.get('tradeGoods', []):
             if trade_good_data:
                 trade_good = TradeGood.add(trade_good_data)
-                MarketTradeGoodLink.add(market, trade_good)
+                MarketTradeGoodLink.add(trade_good_data, market, trade_good)
             else:
                 continue
         for transaction_data in market_data.get('transactions', []):
@@ -803,7 +850,9 @@ class MarketTradeGoodLink(models.Model):
     activity = models.CharField(
         max_length=500,
         verbose_name="the activity level of a trade good. If the good is an import, this represents how strong consumption is for the good. If the good is an export, this represents how strong the production is for the good.",
-        choices=MARKET_ACTIVITY
+        choices=MARKET_ACTIVITY,
+        null=True,
+        blank=True
     )
     purchase_price = models.IntegerField(
         verbose_name="the price at which this good can be purchased from the market.",
@@ -816,6 +865,11 @@ class MarketTradeGoodLink(models.Model):
 
     @classmethod
     def add(cls, trade_data, market, trade_good):
+        if trade_data.get('activity'):
+            activity = trade_data['activity']
+        else:
+            activity = None
+
         market_trade_good_link, created = cls.objects.update_or_create(
             market=market,
             trade_good=trade_good,
@@ -825,7 +879,7 @@ class MarketTradeGoodLink(models.Model):
                 'trade_type': trade_data['type'],
                 'volume': trade_data['tradeVolume'],
                 'supply': trade_data['supply'],
-                'activity': trade_data['activity'],
+                'activity': activity,
                 'purchase_price': trade_data['purchasePrice'],
                 'sell_price': trade_data['sellPrice']
             }
@@ -892,10 +946,10 @@ class MarketTransaction(models.Model):
 
 
 class JumpGate(models.Model):
-    origin = models.ForeignKey(
+    waypoint = models.ForeignKey(
         Waypoint,
         on_delete=models.CASCADE,
-        related_name='jump_gate_destinations',
+        related_name='jump_gate',
     )
     destination = models.ForeignKey(
         Waypoint,
@@ -906,15 +960,15 @@ class JumpGate(models.Model):
     @classmethod
     def add(cls, waypoint, destination):
         jump_gate, created = cls.objects.update_or_create(
-            origin=waypoint,
+            waypoint=waypoint,
             destination=destination,
             defaults={
-                'origin': waypoint,
+                'waypoint': waypoint,
                 'destination': destination
             }
         )
         if created:
-            print(f'Jump gate {jump_gate.origin} to {jump_gate.destination} added to the database.')
+            print(f'Jump gate {jump_gate.waypoint} to {jump_gate.destination} added to the database.')
         else:
-            print(f'Jump gate {jump_gate.origin} to {jump_gate.destination} updated in the database.')
+            print(f'Jump gate {jump_gate.waypoint} to {jump_gate.destination} updated in the database.')
         return jump_gate

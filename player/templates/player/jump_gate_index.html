@@ -1,0 +1,17 @@
+{% extends 'base_player.html' %}
+
+{% block title %}Jump Gates{% endblock %}
+
+{% block content %}
+
+{% if jump_gate_list %}
+    <ul>
+    {% for jump_gate in jump_gate_list %}
+        <li><a href="{% url 'systems:waypoint_detail' system_symbol=jump_gate.waypoint.system.symbol pk=jump_gate.waypoint.pk %}">{{ jump_gate }}</a></li>
+    {% endfor %}
+    </ul>
+{% else %}
+    <p>No Jump Gates are available.</p>
+{% endif %}
+
+{% endblock %}

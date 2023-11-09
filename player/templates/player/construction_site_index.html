@@ -1,0 +1,17 @@
+{% extends 'base_player.html' %}
+
+{% block title %}Construction Sites{% endblock %}
+
+{% block content %}
+
+{% if construction_site_list %}
+    <ul>
+    {% for construction_site in construction_site_list %}
+        <li><a href="{% url 'systems:waypoint_detail' system_symbol=construction_site.waypoint.system.symbol pk=construction_site.waypoint.pk %}">{{ construction_site }}</a></li>
+    {% endfor %}
+    </ul>
+{% else %}
+    <p>No Construction Sites are available.</p>
+{% endif %}
+
+{% endblock %}

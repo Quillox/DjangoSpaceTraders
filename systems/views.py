@@ -3,8 +3,9 @@ from django.views import generic
 from django.contrib import messages
 from django.shortcuts import redirect
 
-from .models import System, Waypoint
+from .models import System, Waypoint, Market, JumpGate
 from player.api import SpaceTradersAPI
+from fleet.models import Shipyard
 
 
 class IndexView(generic.ListView):
@@ -40,14 +41,43 @@ class WaypointDetailView(generic.DetailView):
     template_name = 'systems/waypoint_detail.html'
 
     def post(self, request, *args, **kwargs):
-        if request.POST.get('update_market'):
-            print(f'Updating market {request.POST.get("waypoint_id")}...')
-            market = SpaceTradersAPI.get_add_market(request.POST.get('market_symbol'))
-            messages.success(request, f'Market {market} successfully updated!')
-            return redirect('systems:waypoint_detail', pk=market.pk)
-        elif request.POST.get('update_waypoint'):
-            print(f'Updating waypoint {request.POST.get("waypoint_id")}...')
-            waypoint = SpaceTradersAPI.add_waypoint(request.POST.get('waypoint_id'))
+        if request.POST.get('update_waypoint'):
+            print(f'Updating waypoint {request.POST.get("waypoint_symbol")}...')
+            waypoint = SpaceTradersAPI.update_waypoint(request.POST.get('waypoint_symbol'))
             messages.success(request, f'Waypoint {waypoint} successfully updated!')
-            return redirect('systems:waypoint_detail', pk=waypoint.pk)
+            return redirect('systems:waypoint_detail', system_symbol=waypoint.system.symbol, pk=waypoint.pk)
         return super().get(request, *args, **kwargs)
+
+class MarketDetailView(generic.DetailView):
+    model = Market
+    template_name = 'systems/market_detail.html'
+
+    def post(self, request, *args, **kwargs):
+        if request.POST.get('update_market'):
+            print(f'Updating market {request.POST.get("market_symbol")}...')
+            if request.user.is_authenticated:
+                api = SpaceTradersAPI(request.user.token)
+                market = api.get_add_market(request.POST.get('market_symbol'))
+            else:
+                market = SpaceTradersAPI.get_add_market_no_token(request.POST.get('market_symbol'))
+            messages.success(request, f'Market {market} successfully updated!')
+            return redirect('systems:market_detail', system_symbol=market.waypoint.system.symbol, pk=market.pk)
+        return super().get(request, *args, **kwargs)
+
+
+class ShipyardDetailView(generic.DetailView):
+    model = Shipyard
+    template_name = 'systems/shipyard_detail.html'
+
+    def post(self, request, *args, **kwargs):
+        if request.POST.get('update_shipyard'):
+            print(f'Updating shipyard {request.POST.get("shipyard_symbol")}...')
+            if request.user.is_authenticated:
+                api = SpaceTradersAPI(request.user.token)
+                shipyard = api.get_add_shipyard(request.POST.get('shipyard_symbol'))
+            else:
+                shipyard = SpaceTradersAPI.get_add_shipyard_no_token(request.POST.get('shipyard_symbol'))
+            messages.success(request, f'Shipyard {shipyard} successfully updated!')
+            return redirect('systems:shipyard_detail', system_symbol=shipyard.waypoint.system.symbol, pk=shipyard.pk)
+        return super().get(request, *args, **kwargs)
+

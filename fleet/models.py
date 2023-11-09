@@ -859,9 +859,11 @@ class ShipyardShipMountLink(models.Model):
 
 
 class Shipyard(models.Model):
-    waypoint = models.ForeignKey(
+    waypoint = models.OneToOneField(
         'systems.Waypoint',
         on_delete=models.CASCADE,
+        primary_key=True,
+        related_name='shipyard'
     )
     # The API returns a list with ship types sold here, but you can get than info in the ships field
     # Might need to change this to a ManyToOneField
@@ -900,6 +902,11 @@ class Shipyard(models.Model):
                     ShipCrew.add(shipyard_ship_data['crew'])
                 )
                 ShipyardShipLink.add(shipyard_ship_data, shipyard, shipyard_ship)
+        
+        if created:
+            print(f'\t\tShipyard {shipyard} added to the database')
+        else:
+            print(f'\t\tShipyard {shipyard} updated in the database')
         return shipyard
 
 

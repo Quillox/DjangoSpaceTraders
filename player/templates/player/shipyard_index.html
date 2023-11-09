@@ -1,0 +1,17 @@
+{% extends 'base_player.html' %}
+
+{% block title %}Shipyards{% endblock %}
+
+{% block content %}
+
+{% if shipyard_list %}
+    <ul>
+    {% for shipyard in shipyard_list %}
+        <li><a href="{% url 'systems:shipyard_detail' system_symbol=shipyard.waypoint.system.symbol pk=shipyard.waypoint.pk %}">{{ shipyard }}</a></li>
+    {% endfor %}
+    </ul>
+{% else %}
+    <p>No shipyards are available.</p>
+{% endif %}
+
+{% endblock %}

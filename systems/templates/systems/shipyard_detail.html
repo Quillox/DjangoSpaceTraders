@@ -1,0 +1,25 @@
+{% extends "base_systems.html" %}
+
+{% block content %}
+
+<h2>Shipyard details</h2>
+
+<h3>Available Ships</h3>
+<ul>
+    {% for ship in shipyard.ships.all %}
+    <li>{{ ship }}</li>
+    {% endfor %}
+</ul>
+
+<h3>Modification Fee</h3>
+<p>{{ shipyard.modifications_fee }}</p>
+
+<form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="update_shipyard" value="true">
+    <input type="hidden" name="shipyard_symbol" value="{{ shipyard.pk }}">
+    <label for="update_shipyard">Update Shipyard:</label>
+    <input type="submit" value="Update">
+</form>
+
+{% endblock %}

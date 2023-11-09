@@ -92,7 +92,7 @@ class SpaceTradersAPI:
                 return True
 
     @classmethod
-    def get_add_system(cls, system_symbol, add_jump_gates=True):
+    def get_add_system(cls, system_symbol, add_jump_gates=False):
         sleep(0.5)
         system_symbol = get_sector_system_waypoint(system_symbol)['system']
         system_data = cls.get_no_token(f'systems/{system_symbol}')['data']
@@ -103,7 +103,7 @@ class SpaceTradersAPI:
         return system
     
     @classmethod
-    def system_deep_get(cls, system_symbol, add_jump_gates=False):
+    def system_deep_get(cls, system_symbol, add_jump_gates=True):
         system_symbol = get_sector_system_waypoint(system_symbol)['system']
         system_data = cls.get_no_token(f'systems/{system_symbol}')['data']
         system = System.add(system_data)
@@ -150,7 +150,49 @@ class SpaceTradersAPI:
             # TODO decide where to put handling of the api request answer being None
             if 'MARKETPLACE' in waypoint_traits:
                 if cls.get_no_token(f'systems/{system_symbol}/waypoints/{waypoint.symbol}/market'):
-                    cls.get_add_market(waypoint.symbol)
+                    cls.get_add_market_no_token(waypoint.symbol)
+            if 'SHIPYARD' in waypoint_traits:
+                cls.get_add_shipyard_no_token(waypoint.symbol)
+
+        if waypoint_data.get('chart'):
+            agent_symbol = waypoint_data['chart']['submittedBy']
+            if agent_symbol in [symbol for symbol, _ in FACTION_SYMBOLS]:
+                chart_agent = Agent.objects.get(symbol=f'{agent_symbol}-agent')
+            else:
+                chart_agent = cls.get_add_public_agent(waypoint_data['chart']['submittedBy'])
+            Chart.add(waypoint, chart_agent, waypoint_data['chart']['submittedOn'])
+
+        return waypoint
+
+    @classmethod
+    def update_waypoint(cls, waypoint_symbol):
+        system_symbol = get_sector_system_waypoint(waypoint_symbol)['system']
+        waypoint_data = cls.get_no_token(f'systems/{system_symbol}/waypoints/{waypoint_symbol}')['data']
+        waypoint = Waypoint.objects.get(symbol=waypoint_symbol)
+        waypoint.update(waypoint_data)
+
+        if waypoint.waypoint_type == 'JUMP_GATE':
+            if cls.get_no_token(f'systems/{system_symbol}/waypoints/{waypoint.symbol}/jump-gate'):
+                cls.get_add_jump_gate(waypoint.symbol)
+        
+        if waypoint.is_under_construction:
+            construction_site_data = cls.get_no_token(f'systems/{system_symbol}/waypoints/{waypoint.symbol}/construction')
+            if construction_site_data:
+                construction_site_data = construction_site_data['data']
+                for material in construction_site_data['materials']:
+                    trade_good = TradeGood.add({'symbol':material['tradeSymbol'], 'name':None, 'description':None})
+                    required = material['required']
+                    fulfilled = material['fulfilled']
+                    ConstructionSite.add(waypoint, trade_good, required, fulfilled)
+                waypoint.is_under_construction = construction_site_data['isComplete']
+                waypoint.save()
+
+        if waypoint_data.get('traits'):
+            waypoint_traits = [trait_data['symbol'] for trait_data in waypoint_data['traits']]
+            # TODO decide where to put handling of the api request answer being None
+            if 'MARKETPLACE' in waypoint_traits:
+                if cls.get_no_token(f'systems/{system_symbol}/waypoints/{waypoint.symbol}/market'):
+                    cls.get_add_market_no_token(waypoint.symbol)
             if 'SHIPYARD' in waypoint_traits:
                 cls.get_add_shipyard_no_token(waypoint.symbol)
 
@@ -193,7 +235,7 @@ class SpaceTradersAPI:
             cls.get_add_jump_gate(waypoint_symbol)
 
         if 'MARKETPLACE' in [trait_data['symbol'] for trait_data in waypoint_data['traits']]:
-            cls.get_add_market(waypoint_symbol)
+            cls.get_add_market_no_token(waypoint_symbol)
         if 'SHIPYARD' in [trait_data['symbol'] for trait_data in waypoint_data['traits']]:
             pass
             
@@ -302,11 +344,18 @@ class SpaceTradersAPI:
         return fleet
 
     @classmethod
-    def get_add_market(cls, market_symbol):
+    def get_add_market_no_token(cls, market_symbol):
         system_symbol = get_sector_system_waypoint(market_symbol)['system']
         market_data = cls.get_no_token(f'systems/{system_symbol}/waypoints/{market_symbol}/market')['data']
         market = Market.add(market_data)
         return market
+
+    def get_add_market(self, market_symbol):
+        system_symbol = get_sector_system_waypoint(market_symbol)['system']
+        market_data = self.get_token(f'systems/{system_symbol}/waypoints/{market_symbol}/market')['data']
+        market = Market.add(market_data)
+        return market
+
 
     @classmethod
     def get_add_jump_gate(cls, jump_gate_symbol):
@@ -329,6 +378,18 @@ class SpaceTradersAPI:
             print(f'Error: {shipyard_symbol} is not scannable!')
             return None
         cls.get_add_system(system_symbol)
+        waypoint = Waypoint.objects.get(symbol=shipyard_symbol)
+        shipyard = Shipyard.add(shipyard_data, waypoint)
+        return shipyard
+    
+    def get_add_shipyard(self, shipyard_symbol):
+        system_symbol = get_sector_system_waypoint(shipyard_symbol)['system']
+        shipyard_data = self.get_token(f'systems/{system_symbol}/waypoints/{shipyard_symbol}/shipyard')
+        if not shipyard_data:
+            print(f'Error: {shipyard_symbol} is not scannable!')
+            return None
+        # TODO I technically should not need to update the system here. But this is safe.
+        self.get_add_system(system_symbol)
         waypoint = Waypoint.objects.get(symbol=shipyard_symbol)
         shipyard = Shipyard.add(shipyard_data, waypoint)
         return shipyard
@@ -363,8 +424,7 @@ class SpaceTradersAPI:
             if faction_data.get('headquarters'):
                 headquarters_symbol = faction_data['headquarters']
                 headquarters_system_symbol = get_sector_system_waypoint(headquarters_symbol)['system']
-                cls.get_add_system(headquarters_system_symbol)
-                sleep(0.5)
+                cls.get_add_system(headquarters_system_symbol, add_jump_gates=False)
                 headquarters = System.objects.get(symbol=headquarters_symbol)
                 faction.headquarters = headquarters
                 faction.save()
