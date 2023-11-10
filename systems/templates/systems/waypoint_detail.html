@@ -28,6 +28,10 @@
         </td>
     </tr>
     <tr>
+        <th>x, y</th>
+        <td>{{ waypoint.x }}, {{ waypoint.y }}</td>
+    </tr>
+    <tr>
         <th>Traits:</th>
         <td>
             <ul>
@@ -41,22 +45,53 @@
 
 <form method="post">
     {% csrf_token %}
-    <input type="hidden" name="update-update_waypoint" value="true">
+    <input type="hidden" name="update_waypoint" value="true">
     <label for="update_waypoint">Update Waypoint:</label>
     <input type="submit" value="Update">
 </form>
 
 <form method="post">
     {% csrf_token %}
-    <input type="hidden" name="navigate-navigate" value="true">
+    <input type="hidden" name="navigate" value="true">
     <label for="fleet">Fleet:</label>
-    <select name="navigate-ship_id" id="fleet">
+    <select name="ship_symbol" id="ship_symbol">
         {% for ship in fleet %}
-        <option value="{{ ship.pk }}">{{ ship.pk }}</option>
+        <option value="{{ ship.symbol }}">{{ ship.symbol }}</option>
         {% endfor %}
     </select>
-    <input type="submit" value="Navigate">
+    <input type="submit" value="Navigate Here">
 </form>
+
+
+<h3>Fleet</h3>
+
+{% if docked_ships %}
+<h4>Docked Ships</h4>
+{% for ship in docked_ships %}
+<li><a href="{% url 'fleet:detail' pk=ship.symbol %}">{{ ship }}</a></li>
+{% endfor %}
+<form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="refuel" value="true">
+    <label for="fleet">Refuel Ship:</label>
+    <select name="ship_symbol" id="ship_symbol">
+        {% for ship in docked_ships %}
+        <option value="{{ ship.symbol }}">{{ ship.symbol }}</option>
+        {% endfor %}
+    </select>
+    <input type="submit" value="Refuel">
+</form>
+{% endif %}
+
+{% if orbiting_ships %}
+<h4>Orbiting Ships</h4>
+{% for ship in orbiting_ships %}
+<li><a href="{% url 'fleet:detail' pk=ship.symbol %}">{{ ship }}</a></li>
+{% endfor %}
+
+{% endif %}
+
+
 
 {% if waypoint.market %}
 <h3>Marketplace</h3>

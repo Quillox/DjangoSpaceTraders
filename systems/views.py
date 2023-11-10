@@ -6,7 +6,7 @@ from django.shortcuts import redirect, get_object_or_404
 
 from .models import System, Waypoint, Market, JumpGate
 from player.api import SpaceTradersAPI
-from fleet.models import Shipyard, ShipyardShip, Ship
+from fleet.models import Shipyard, ShipyardShip, Ship, ShipyardShipLink
 
 
 class IndexView(generic.ListView):
@@ -38,20 +38,6 @@ class WaypointIndexView(generic.ListView):
         return Waypoint.objects.filter(system__symbol=self.kwargs['system_symbol']).order_by('waypoint_type')
 
 
-class UpdateWaypointForm(forms.Form):
-    update_waypoint = forms.BooleanField()
-
-class NavigateShipForm(forms.ModelForm):
-    class Meta:
-        model = Ship
-        fields = ['symbol']
-
-
-def update_waypoint(request, waypoint_symbol):
-    if request.method == 'POST':
-        pass
-
-
 class WaypointDetailView(generic.DetailView):
     model = Waypoint
     template_name = 'systems/waypoint_detail.html'
@@ -59,22 +45,33 @@ class WaypointDetailView(generic.DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['fleet'] = Ship.objects.filter(agent=self.request.user.agent.pk).all()
+        context['docked_ships'] = [ship for ship in context['fleet'] if ship.nav.waypoint.symbol == self.get_object().symbol and ship.nav.status == 'DOCKED']
+        context['orbiting_ships'] = [ship for ship in context['fleet'] if ship.nav.waypoint.symbol == self.get_object().symbol and ship.nav.status == 'IN_ORBIT']
         return context
 
     def post(self, request, *args, **kwargs):
-        waypoint_symbol = self.get_object().symbol
-        update_form = UpdateWaypointForm(request.POST, prefix='update')
-        navigate_form = NavigateShipForm(request.POST, prefix='navigate')
+        waypoint = self.get_object()
 
-        if update_form.is_valid():
-            print(f'Updating waypoint {waypoint_symbol}...')
-            waypoint = SpaceTradersAPI.update_waypoint(waypoint_symbol)
+        if request.POST.get('update_waypoint'):
+            print(f'Updating waypoint {waypoint.symbol}...')
+            waypoint = SpaceTradersAPI.update_waypoint(waypoint.symbol)
             messages.success(request, f'Waypoint {waypoint} successfully updated!')
             return redirect('systems:waypoint_detail', system_symbol=waypoint.system.symbol, pk=waypoint.pk)
-
-        elif navigate_form.is_valid():
-            print('jam')
-            print(f'Navigating ship {navigate_form.cleaned_data["ship_id"]} to waypoint {waypoint_symbol}...')
+        
+        if request.POST.get('navigate'):
+            ship = Ship.objects.get(symbol=request.POST.get("ship_symbol"))
+            print(f'Navigating {ship} to {waypoint.symbol}...')
+            api = SpaceTradersAPI(request.user.token)
+            ship_nav = api.navigate_ship(ship.symbol, waypoint.symbol)
+            return redirect('fleet:nav', pk=ship_nav.ship.symbol)
+        
+        if request.POST.get('refuel'):
+            ship = Ship.objects.get(symbol=request.POST.get("ship_symbol"))
+            print(f'Refuelling {ship} at {waypoint.symbol}...')
+            api = SpaceTradersAPI(request.user.token)
+            market_transaction = api.refuel_ship(ship.symbol)
+            messages.success(request, f'{market_transaction}')
+            return redirect('fleet:detail', pk=ship.symbol)
 
         return super().get(request, *args, **kwargs)
 
@@ -118,3 +115,12 @@ class ShipyardShipDetailView(generic.DetailView):
 
     def get_object(self):
         return get_object_or_404(ShipyardShip, pk=self.kwargs['ship_id'])
+    
+    def post(self, request, *args, **kwargs):
+        if request.POST.get('buy'):
+            print(f'Buying {self.get_object()}...')
+            api = SpaceTradersAPI(request.user.token)
+            # get the waypoint symbol from the url
+            ship = api.purchase_ship(self.kwargs['pk'], self.get_object().ship_type)
+            return redirect('fleet:detail', pk=ship.pk)
+        return super().get(request, *args, **kwargs)

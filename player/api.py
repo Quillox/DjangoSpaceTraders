@@ -2,10 +2,10 @@ import requests
 from time import sleep
 
 from factions.models import Faction, FACTION_SYMBOLS
-from systems.models import System, TradeGood, Waypoint, Chart, Market, JumpGate, ConstructionSite
+from systems.models import MarketTransaction, System, TradeGood, Waypoint, Chart, Market, JumpGate, ConstructionSite
 from agents.models import Agent
 from contracts.models import Contract
-from fleet.models import Ship, ShipRegistration, ShipNav, ShipNavRoute, ShipCrew, Frame, Reactor, Engine, Module, Mount, Shipyard, ShipyardTransaction
+from fleet.models import Ship, ShipRegistration, ShipNav, ShipNavRoute, ShipCrew, Frame, Reactor, Engine, Module, Mount, Shipyard, ShipyardTransaction, FuelConsumedLog
 from player.models import Player
 
 
@@ -57,7 +57,7 @@ class SpaceTradersAPI:
         }
         response = requests.post(
             f'{self.base_url}/{endpoint}', headers=headers, json=payload)
-        if response.status_code == 200:
+        if response.status_code in [200, 201]:
             return response.json()
         else:
             print(response.status_code)
@@ -119,7 +119,6 @@ class SpaceTradersAPI:
             else:
                 print(f'Waypoint {waypoint_data_shallow["symbol"]} not accessible!')
         return system
-
 
     @classmethod
     def add_waypoint(cls, system_symbol, add_jump_gates, system_data, waypoint_data):
@@ -359,7 +358,6 @@ class SpaceTradersAPI:
         market = Market.add(market_data)
         return market
 
-
     @classmethod
     def get_add_jump_gate(cls, jump_gate_symbol):
         system_symbol = get_sector_system_waypoint(jump_gate_symbol)['system']
@@ -403,6 +401,84 @@ class SpaceTradersAPI:
                 shipyard_transaction = ShipyardTransaction.add(transaction_data, shipyard, buyer)
         return shipyard
 
+    def purchase_ship(self, shipyard_symbol, ship_type):
+        payload = {
+            'shipType': ship_type,
+            'waypointSymbol': shipyard_symbol
+        }
+        response_data = self.post_token(f'my/ships', payload)['data']
+        ship = self.add_ship(response_data['ship'], self.agent)
+        shipyard = Shipyard.objects.get(pk=shipyard_symbol)
+        agent_headquarters = Waypoint.objects.get(symbol=response_data['agent']['headquarters'])
+        agent_faction = Faction.objects.get(symbol=response_data['agent']['startingFaction'])
+        self.agent.add(response_data['agent'], agent_headquarters, agent_faction)
+        transaction = ShipyardTransaction.add(response_data['transaction'], shipyard, self.agent)
+        return ship
+    
+    def orbit_ship(self, ship_symbol):
+        response_data = self.post_token(f'my/ships/{ship_symbol}/orbit')['data']
+        ship_nav = ShipNav.add(
+            response_data['nav'],
+            Ship.objects.get(pk=ship_symbol),
+            System.objects.get(symbol=response_data['nav']['systemSymbol']),
+            Waypoint.objects.get(symbol=response_data['nav']['waypointSymbol'])
+        )
+        return ship_nav
+    
+    def dock_ship(self, ship_symbol):
+        response_data = self.post_token(f'my/ships/{ship_symbol}/dock')['data']
+        ship_nav = ShipNav.add(
+            response_data['nav'],
+            Ship.objects.get(pk=ship_symbol),
+            System.objects.get(symbol=response_data['nav']['systemSymbol']),
+            Waypoint.objects.get(symbol=response_data['nav']['waypointSymbol'])
+        )
+        return ship_nav
+    
+    def navigate_ship(self, ship_symbol, destination_symbol):
+        payload = {
+            'waypointSymbol': destination_symbol
+        }
+        response_data = self.post_token(f'my/ships/{ship_symbol}/navigate', payload)['data']
+        ship_nav = ShipNav.add(
+            response_data['nav'],
+            Ship.objects.get(pk=ship_symbol),
+            System.objects.get(symbol=response_data['nav']['systemSymbol']),
+            Waypoint.objects.get(symbol=response_data['nav']['waypointSymbol'])
+        )
+        ship = Ship.objects.get(ship_symbol=ship_symbol)
+        ship.fuel_current = response_data['fuel']['current']
+        ship.fuel_capacity = response_data['fuel']['capacity']
+        ship.save()
+        fuel_log = FuelConsumedLog.add(response_data['fuel']['consumed'], ship)
+        return ship_nav
+    
+    def refuel_ship(self, ship_symbol, units: str=None):
+        if units:
+            payload = {
+                'units': units
+            }
+        response_data = self.post_token(f'my/ships/{ship_symbol}/refuel')['data']
+        self.agent.add(
+            response_data['agent'],
+            Waypoint.objects.get(symbol=response_data['agent']['headquarters']),
+            Faction.objects.get(symbol=response_data['agent']['startingFaction'])
+        )
+        ship = Ship.objects.get(pk=ship_symbol)
+        ship.fuel_current = response_data['fuel']['current']
+        ship.fuel_capacity = response_data['fuel']['capacity']
+        ship.save()
+        fuel_log = FuelConsumedLog.add(response_data['fuel']['consumed'], ship)
+        market_transaction = MarketTransaction.add(
+            response_data['transaction'],
+            Market.objects.get(pk=response_data['transaction']['waypointSymbol']),
+            ship,
+            TradeGood.objects.get(symbol=response_data['transaction']['tradeSymbol'])
+        )
+        return market_transaction
+    
+    def ship_extract_resources(self, ship_symbol):
+        pass
 
     @classmethod
     def populate_factions(cls):

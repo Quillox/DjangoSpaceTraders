@@ -40,4 +40,23 @@
         </tr>
     </tbody>
 </table>
+
+{% if shipnav.status == 'DOCKED' %}
+<form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="orbit" value="true">
+    <label for="orbit">Orbit Ship:</label>
+    <input type="submit" value="Orbit">
+</form>
+{% endif %}
+
+{% if shipnav.status == 'IN_ORBIT' %}
+<form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="dock" value="true">
+    <label for="dock">Dock Ship:</label>
+    <input type="submit" value="Dock">
+</form>
+{% endif %}
+
 {% endblock %}

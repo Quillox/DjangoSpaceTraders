@@ -62,4 +62,12 @@
         </td>
     </tr>
 </table>
+
+<form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="buy" value="true">
+    <label for="buy">Buy Ship:</label>
+    <input type="submit" value="Buy">
+</form>
+
 {% endblock %}
