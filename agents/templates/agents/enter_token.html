@@ -2,11 +2,10 @@
 
 {% block content %}
 <h1>Enter SpaceTraders API Token</h1>
-<form method="post">
+<form action="{% url 'agents:enter-token' %}" method="post">
     {% csrf_token %}
-    <label for="token">Token:</label>
-    <input type="text" id="token" name="token">
-    <button type="submit">Save</button>
+    {{ form.as_table }}
+    <input type="submit" value="Submit">
 </form>
 
 

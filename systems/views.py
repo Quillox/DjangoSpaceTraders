@@ -47,6 +47,11 @@ class NavigateShipForm(forms.ModelForm):
         fields = ['symbol']
 
 
+def update_waypoint(request, waypoint_symbol):
+    if request.method == 'POST':
+        pass
+
+
 class WaypointDetailView(generic.DetailView):
     model = Waypoint
     template_name = 'systems/waypoint_detail.html'

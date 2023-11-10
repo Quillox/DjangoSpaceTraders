@@ -512,38 +512,6 @@ class Waypoint(models.Model):
         print(f'\tWaypoint {self.symbol} updated in the database.')
         return self
 
-class ConstructionSite(models.Model):
-    waypoint = models.ForeignKey(
-        Waypoint,
-        on_delete=models.CASCADE,
-        related_name='construction_site'
-    )
-    TradeGood = models.ForeignKey(
-        TradeGood,
-        on_delete=models.CASCADE,
-        related_name='construction_site'
-    )
-    required = models.IntegerField(
-        verbose_name="the number of units of the trade good required to complete construction of the waypoint.",
-    )
-    fulfilled = models.IntegerField(
-        verbose_name="the number of units of the trade good that have been delivered to the construction site.",
-    )
-
-    @classmethod
-    def add(cls, waypoint, trade_good, required, fulfilled):
-        construction_site, created = cls.objects.update_or_create(
-            waypoint=waypoint,
-            TradeGood=trade_good,
-            defaults={
-                'waypoint': waypoint,
-                'TradeGood': trade_good,
-                'required': required,
-                'fulfilled': fulfilled
-            }
-        )
-        return construction_site
-
 
 class WaypointTrait(models.Model):
     symbol = models.CharField(
@@ -598,6 +566,38 @@ class WaypointTraitLink(models.Model):
             }
         )
         return waypoint_trait_link
+
+class ConstructionSite(models.Model):
+    waypoint = models.ForeignKey(
+        Waypoint,
+        on_delete=models.CASCADE,
+        related_name='construction_site'
+    )
+    TradeGood = models.ForeignKey(
+        TradeGood,
+        on_delete=models.CASCADE,
+        related_name='construction_site'
+    )
+    required = models.IntegerField(
+        verbose_name="the number of units of the trade good required to complete construction of the waypoint.",
+    )
+    fulfilled = models.IntegerField(
+        verbose_name="the number of units of the trade good that have been delivered to the construction site.",
+    )
+
+    @classmethod
+    def add(cls, waypoint, trade_good, required, fulfilled):
+        construction_site, created = cls.objects.update_or_create(
+            waypoint=waypoint,
+            TradeGood=trade_good,
+            defaults={
+                'waypoint': waypoint,
+                'TradeGood': trade_good,
+                'required': required,
+                'fulfilled': fulfilled
+            }
+        )
+        return construction_site
 
 
 class WaypointModifier(models.Model):

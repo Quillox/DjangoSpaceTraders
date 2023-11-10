@@ -142,4 +142,4 @@ STATICFILES_DIRS = [
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Redirect to home URL after login (Default redirects to /accounts/profile/)
-LOGIN_REDIRECT_URL = '/agents/enter_token'
+LOGIN_REDIRECT_URL = '/agents/enter-token'

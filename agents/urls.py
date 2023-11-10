@@ -7,6 +7,6 @@ app_name = 'agents'
 
 urlpatterns = [
     path('', views.IndexView.as_view(), name='index'),
-    path('enter_token/', views.enter_token, name='enter_token'),
+    path('enter-token/', views.EnterTokenView.as_view(), name='enter-token'),
     path("<str:pk>/", views.DetailView.as_view(), name="detail"),
 ]
