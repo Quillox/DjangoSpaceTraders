@@ -1,3 +1,4 @@
+from typing import Any
 from django import forms
 from django.shortcuts import render
 from django.views import generic
@@ -72,12 +73,29 @@ class WaypointDetailView(generic.DetailView):
             market_transaction = api.refuel_ship(ship.symbol)
             messages.success(request, f'{market_transaction}')
             return redirect('fleet:detail', pk=ship.symbol)
+        
+        if request.POST.get('extract'):
+            ship = Ship.objects.get(symbol=request.POST.get("ship_symbol"))
+            print(f'{ship} is extracting at {waypoint.symbol}...')
+            api = SpaceTradersAPI(request.user.token)
+            cooldown, inventory = api.ship_extract_resources(ship.symbol)
+            messages.success(request, f'{ship} is on cooldown for {cooldown.remaining_seconds} s')
+            messages.success(request, f'{ship} current inventory:')
+            for item in inventory:
+                print(item)
+                messages.success(request, f'\t{item.units} {item.trade_good}')
+            return redirect('systems:waypoint_detail', system_symbol=waypoint.system.symbol, pk=waypoint.pk)
 
         return super().get(request, *args, **kwargs)
 
 class MarketDetailView(generic.DetailView):
     model = Market
     template_name = 'systems/market_detail.html'
+
+    def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
+        context = super().get_context_data(**kwargs)
+        context['docked_ships'] = [ship for ship in Ship.objects.filter(agent=self.request.user.agent.pk).all() if ship.nav.waypoint.symbol == self.get_object().waypoint.symbol and ship.nav.status == 'DOCKED']
+        return context
 
     def post(self, request, *args, **kwargs):
         if request.POST.get('update_market'):
@@ -89,6 +107,15 @@ class MarketDetailView(generic.DetailView):
                 market = SpaceTradersAPI.get_add_market_no_token(request.POST.get('market_symbol'))
             messages.success(request, f'Market {market} successfully updated!')
             return redirect('systems:market_detail', system_symbol=market.waypoint.system.symbol, pk=market.pk)
+        
+        if request.POST.get('ship_sell_cargo'):
+            ship = Ship.objects.get(symbol=request.POST.get("ship_symbol"))
+            print(f'Selling {request.POST.get("units")} {request.POST.get("trade_good")} from {ship} at {self.get_object()}...')
+            api = SpaceTradersAPI(request.user.token)
+            market_transaction = api.sell_ship_cargo(ship.symbol, request.POST.get("trade_good"), request.POST.get("units"))
+            messages.success(request, f'{market_transaction}')
+            return redirect('fleet:detail', pk=ship.symbol)
+
         return super().get(request, *args, **kwargs)
 
 

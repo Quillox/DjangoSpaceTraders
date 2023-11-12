@@ -88,6 +88,17 @@
 {% for ship in orbiting_ships %}
 <li><a href="{% url 'fleet:detail' pk=ship.symbol %}">{{ ship }}</a></li>
 {% endfor %}
+<form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="extract" value="true">
+    <label for="fleet">Extract Ore:</label>
+    <select name="ship_symbol" id="ship_symbol">
+        {% for ship in orbiting_ships %}
+        <option value="{{ ship.symbol }}">{{ ship.symbol }}</option>
+        {% endfor %}
+    </select>
+    <input type="submit" value="Extract">
+</form>
 
 {% endif %}
 

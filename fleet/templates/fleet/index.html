@@ -8,6 +8,14 @@
 <li><a href="{% url 'fleet:detail' ship.pk %}">{{ ship.symbol }}</a></li>
 {% endfor %}
 </ul>
+
+<form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="update_fleet" value="true">
+    <label for="update_fleet">Update Fleet:</label>
+    <input type="submit" value="Update">
+</form>
+
 {% else %}
 <p>No ships in fleet.</p>
 {% endif %}

@@ -5,7 +5,7 @@ from factions.models import Faction, FACTION_SYMBOLS
 from systems.models import MarketTransaction, System, TradeGood, Waypoint, Chart, Market, JumpGate, ConstructionSite
 from agents.models import Agent
 from contracts.models import Contract
-from fleet.models import Ship, ShipRegistration, ShipNav, ShipNavRoute, ShipCrew, Frame, Reactor, Engine, Module, Mount, Shipyard, ShipyardTransaction, FuelConsumedLog
+from fleet.models import Ship, ShipRegistration, ShipNav, ShipNavRoute, ShipCrew, Frame, Reactor, Engine, Module, Mount, Shipyard, ShipyardTransaction, FuelConsumedLog, Cooldown, ShipCargoInventory
 from player.models import Player
 
 
@@ -357,6 +357,39 @@ class SpaceTradersAPI:
         market_data = self.get_token(f'systems/{system_symbol}/waypoints/{market_symbol}/market')['data']
         market = Market.add(market_data)
         return market
+    
+    def get_ship_cargo(self, ship_symbol):
+        ship_cargo_data = self.get_token(f'my/ships/{ship_symbol}/cargo')['data']
+        ship = Ship.objects.get(symbol=ship_symbol)
+        ship.cargo_capacity = ship_cargo_data['capacity']
+        ship.cargo_units = ship_cargo_data['units']
+        ship.save()
+        ship_cargo_inventory = ShipCargoInventory.add(ship_cargo_data['inventory'], ship)
+        return ship_cargo_inventory
+    
+    def sell_ship_cargo(self, ship_symbol, trade_good_symbol, units):
+        payload = {
+            'symbol': trade_good_symbol,
+            'units': units
+        }
+        response_data = self.post_token(f'my/ships/{ship_symbol}/sell', payload)['data']
+        agent = self.agent.add(
+            response_data['agent'],
+            Waypoint.objects.get(symbol=response_data['agent']['headquarters']),
+            Faction.objects.get(symbol=response_data['agent']['startingFaction'])
+        )
+        ship = Ship.objects.get(symbol=ship_symbol)
+        ship.cargo_capacity = response_data['cargo']['capacity']
+        ship.cargo_units = response_data['cargo']['units']
+        ship.save()
+        ship_cargo_inventory = ShipCargoInventory.add(response_data['cargo']['inventory'], ship)
+        market_transaction = MarketTransaction.add(
+            response_data['transaction'],
+            Market.objects.get(pk=response_data['transaction']['waypointSymbol']),
+            ship,
+            TradeGood.objects.get(symbol=response_data['transaction']['tradeSymbol'])
+        )
+        return market_transaction
 
     @classmethod
     def get_add_jump_gate(cls, jump_gate_symbol):
@@ -478,7 +511,13 @@ class SpaceTradersAPI:
         return market_transaction
     
     def ship_extract_resources(self, ship_symbol):
-        pass
+        extraction_data = self.post_token(f'my/ships/{ship_symbol}/extract')['data']
+        ship = Ship.objects.get(pk=ship_symbol)
+        ship.cargo_capacity = extraction_data['cargo']['capacity']
+        ship.cargo_units = extraction_data['cargo']['units']
+        cooldown = Cooldown.add(extraction_data['cooldown'], ship)
+        ship_cargo_inventory = ShipCargoInventory.add(extraction_data['cargo']['inventory'], ship)
+        return cooldown, ship_cargo_inventory
 
     @classmethod
     def populate_factions(cls):

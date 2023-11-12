@@ -1,5 +1,6 @@
 from django.db import models
 from django.core.validators import MinValueValidator
+from django.apps import apps
 
 from factions.models import Faction
 
@@ -719,6 +720,9 @@ class Market(models.Model):
 
     @classmethod
     def add(cls, market_data):
+        # Avoids circular import
+        Ship = apps.get_model('fleet', 'Ship')
+
         market, created = cls.objects.update_or_create(
             waypoint=Waypoint.objects.get(symbol=market_data['symbol']),
             defaults={
@@ -733,7 +737,8 @@ class Market(models.Model):
             if trade_good_data:
                 trade_good = TradeGood.add(trade_good_data)
                 MarketImportLink.add(market, trade_good)
-        for trade_good_data in market_data.get('exchanges', []):
+        for trade_good_data in market_data.get('exchange', []):
+            print("heeey", trade_good_data)
             if trade_good_data:
                 trade_good = TradeGood.add(trade_good_data)
                 MarketExchangeLink.add(market, trade_good)
@@ -745,7 +750,7 @@ class Market(models.Model):
                 continue
         for transaction_data in market_data.get('transactions', []):
             if transaction_data:
-                ship = Waypoint.objects.get(symbol=transaction_data['shipSymbol'])
+                ship = Ship.objects.get(symbol=transaction_data['shipSymbol'])
                 trade_good = TradeGood.objects.get(symbol=transaction_data['tradeSymbol'])
                 MarketTransaction.add(transaction_data, market, ship, trade_good)
             else:
@@ -891,10 +896,12 @@ class MarketTransaction(models.Model):
     market = models.ForeignKey(
         Market,
         on_delete=models.CASCADE,
+        related_name='transactions'
     )
     ship_symbol = models.ForeignKey(
         'fleet.Ship',
         on_delete=models.CASCADE,
+        related_name='market_transactions'
     )
     trade_good = models.ForeignKey(
         TradeGood,

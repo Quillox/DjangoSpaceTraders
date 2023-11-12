@@ -610,7 +610,7 @@ class Ship(models.Model):
 
 
 class Cooldown(models.Model):
-    ship_symbol = models.ForeignKey(
+    ship = models.ForeignKey(
         Ship,
         on_delete=models.CASCADE,
     )
@@ -631,9 +631,9 @@ class Cooldown(models.Model):
     @classmethod
     def add(cls, cooldown_data, ship):
         cooldown, created = cls.objects.update_or_create(
-            ship_symbol=ship,
+            ship=ship,
             defaults={
-                'ship_symbol': ship,
+                'ship': ship,
                 'total_seconds': cooldown_data['totalSeconds'],
                 'remaining_seconds': cooldown_data['remainingSeconds'],
                 'expiration': cooldown_data['expiration']
@@ -642,7 +642,7 @@ class Cooldown(models.Model):
         return cooldown
 
 class ShipCargoInventory(models.Model):
-    ship_symbol = models.ForeignKey(
+    ship = models.ForeignKey(
         Ship,
         on_delete=models.CASCADE,
     )
@@ -656,18 +656,22 @@ class ShipCargoInventory(models.Model):
 
     @classmethod
     def add(cls, inventory_data, ship):
+        # Delete old ship cargo inventory because we receive the entire contents of the cargo hold
+        cls.objects.filter(ship=ship).delete()
+
         ship_cargo_inventory = []
         for trade_good_data in inventory_data:
             ship_cargo_inventory.append(
                 cls.objects.update_or_create(
-                    ship_symbol=ship,
+                    ship=ship,
                     trade_good=TradeGood.add(trade_good_data),
+                    units=trade_good_data['units'],
                     defaults={
-                        'ship_symbol': ship,
+                        'ship': ship,
                         'trade_good': TradeGood.add(trade_good_data),
                         'units': trade_good_data['units']
                     }
-                )
+                )[0]
             )
         return ship_cargo_inventory
 
