@@ -60,7 +60,7 @@
         {% for transaction in market.transactions.all %}
         <tr>
             <td>{{ transaction.market }}</td>
-            <td>{{ transaction.ship_symbol }}</td>
+            <td>{{ transaction.ship }}</td>
             <td>{{ transaction.trade_good }}</td>
             <td>{{ transaction.transaction_type }}</td>
             <td>{{ transaction.units }}</td>
@@ -77,24 +77,6 @@
 {% for ship in docked_ships %}
 <li><a href="{% url 'fleet:detail' pk=ship.symbol %}">{{ ship }}</a></li>
 {% endfor %}
-<form method="post">
-    {% csrf_token %}
-    <input type="hidden" name="ship_sell_cargo" value="true">
-    <label for="ship_symbol">Sell Cargo:</label>
-    <select name="ship_symbol" id="ship_symbol">
-        {% for ship in docked_ships %}
-        <option value="{{ ship.symbol }}">{{ ship.symbol }}</option>
-        {% endfor %}
-    </select>
-    <label for="trade_good">Trade Good:</label>
-    <select name="trade_good" id="trade_good">
-        {% for inventory in ship_cargo_inventories %}
-        <option value="{{ inventory.trade_good.id }}">{{ inventory.trade_good }}</option>
-        {% endfor %}
-    </select>
-    <label for="units">Units:</label>
-    <input type="number" id="units" name="units" min="1">
-    <input type="submit" value="Sell">
-</form>
+
 {% endif %}
 {% endblock %}

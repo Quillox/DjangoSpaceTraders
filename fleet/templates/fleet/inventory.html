@@ -1,5 +1,5 @@
-{%extends 'base_fleet.html' %}
-{%block content %}
+{% extends 'base_fleet.html' %}
+{% block content %}
 
 <h2>{{ship}} Inventory</h2>
 <table>
@@ -27,6 +27,58 @@
     <input type="hidden" name="ship_symbol" value="{{ ship.symbol }}">
     <label for="update_inventory">Update Inventory:</label>
     <input type="submit" value="Update">
+</form>
+
+<h3>Jettison</h3>
+<form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="jettison_cargo" value="true">
+    <input type="hidden" name="ship_symbol" value="{{ ship.symbol }}">
+    <label for="trade_good">Trade Good:</label>
+    <select name="trade_good" id="trade_good">
+        {% for cargo in ship.cargo.all %}
+        <option value="{{ cargo.trade_good.symbol }}">{{ cargo.trade_good }}</option>
+        {% endfor %}
+    </select>
+    <input type="submit" value="Jettison All">
+</form>
+
+{% if market %}
+<h3>Sell Cargo</h3>
+<form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="sell_cargo" value="true">
+    <input type="hidden" name="ship_symbol" value="{{ ship.symbol }}">
+    <label for="trade_good">Trade Good:</label>
+    <select name="trade_good" id="trade_good">
+        {% for cargo in ship.cargo.all %}
+        <option value="{{ cargo.trade_good.symbol }}">{{ cargo.trade_good }}</option>
+        {% endfor %}
+    </select>
+    <input type="submit" value="Sell All">
+</form>
+{% endif %}
+
+<h3>Contract</h3>
+<form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="deliver_cargo" value="true">
+    <input type="hidden" name="ship_symbol" value="{{ ship.symbol }}">
+    <label for="trade_good">Trade Good:</label>
+    <select name="trade_good" id="trade_good">
+        {% for cargo in ship.cargo.all %}
+        <option value="{{ cargo.trade_good.symbol }}">{{ cargo.trade_good }}</option>
+        {% endfor %}
+    </select>
+    <br>
+    <label for="Contract">Contract:</label>
+    <select name="contract" id="contract">
+        {% for contract in contracts %}
+        <option value="{{ contract.pk }}">{{ contract }}</option>
+        {% endfor %}
+    </select>
+    <br>
+    <input type="submit" value="Deliver">
 </form>
 
 {% endblock %}

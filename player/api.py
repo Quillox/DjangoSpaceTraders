@@ -390,6 +390,25 @@ class SpaceTradersAPI:
             TradeGood.objects.get(symbol=response_data['transaction']['tradeSymbol'])
         )
         return market_transaction
+    
+    def contract_deliver_cargo(self, contract_id, ship_symbol, trade_good_symbol, units):
+        payload = {
+            'tradeSymbol': trade_good_symbol,
+            'shipSymbol': ship_symbol,
+            'units': units
+        }
+        response_data = self.post_token(f'my/contracts/{contract_id}/deliver', payload)['data']
+        ship = Ship.objects.get(ship_symbol)
+        ship.cargo_capacity = response_data['cargo']['capacity']
+        ship.cargo_units = response_data['cargo']['units']
+        ship.save()
+        ship_cargo_inventory = ShipCargoInventory.add(response_data['cargo']['inventory'], ship)
+        contract = Contract.add(
+            response_data['contract'],
+            self.agent,
+            Faction.objects.get(symbol=response_data['contract']['factionSymbol'])
+        )   
+        return contract
 
     @classmethod
     def get_add_jump_gate(cls, jump_gate_symbol):
@@ -479,7 +498,7 @@ class SpaceTradersAPI:
             System.objects.get(symbol=response_data['nav']['systemSymbol']),
             Waypoint.objects.get(symbol=response_data['nav']['waypointSymbol'])
         )
-        ship = Ship.objects.get(ship_symbol=ship_symbol)
+        ship = Ship.objects.get(symbol=ship_symbol)
         ship.fuel_current = response_data['fuel']['current']
         ship.fuel_capacity = response_data['fuel']['capacity']
         ship.save()
@@ -518,6 +537,19 @@ class SpaceTradersAPI:
         cooldown = Cooldown.add(extraction_data['cooldown'], ship)
         ship_cargo_inventory = ShipCargoInventory.add(extraction_data['cargo']['inventory'], ship)
         return cooldown, ship_cargo_inventory
+    
+    def ship_jettison_cargo(self, ship_symbol, trade_good_symbol, units):
+        payload = {
+            'symbol': trade_good_symbol,
+            'units': units
+        }
+        response_data = self.post_token(f'my/ships/{ship_symbol}/jettison', payload)['data']
+        ship = Ship.objects.get(pk=ship_symbol)
+        ship.cargo_capacity = response_data['cargo']['capacity']
+        ship.cargo_units = response_data['cargo']['units']
+        ship.save()
+        ship_cargo_inventory = ShipCargoInventory.add(response_data['cargo']['inventory'], ship)
+        return ship_cargo_inventory
 
     @classmethod
     def populate_factions(cls):

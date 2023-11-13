@@ -5,6 +5,8 @@ from django.shortcuts import redirect, get_object_or_404
 
 from .models import Ship, ShipNav, ShipCargoInventory
 from player.api import SpaceTradersAPI
+from systems.models import Waypoint, Market, TradeGood
+from contracts.models import Contract
 
 
 class IndexView(generic.ListView):
@@ -57,6 +59,8 @@ class InventoryView(generic.ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['ship'] = Ship.objects.get(symbol=self.kwargs['pk'])
+        context['contracts'] = context['ship'].agent.contracts.all()
+        context['market'] = context['ship'].nav.waypoint.market if context['ship'].nav.status == 'DOCKED' else None
         return context
     
     def post(self, request, *args, **kwargs):
@@ -68,4 +72,46 @@ class InventoryView(generic.ListView):
             messages.success(request, f'Updated inventory for {ship}!')
             return redirect('fleet:inventory', pk=ship.symbol)
 
-
+        if request.POST.get('sell_cargo'):
+            ship = Ship.objects.get(symbol=request.POST.get("ship_symbol"))
+            trade_good_symbol = request.POST.get("trade_good")
+            trade_good = TradeGood.objects.get(symbol=trade_good_symbol)
+            print(f'Selling {trade_good} from {ship} at {ship.nav.waypoint.market}...')
+            api = SpaceTradersAPI(request.user.token)
+            market_transaction = api.sell_ship_cargo(
+                ship.symbol,
+                trade_good_symbol,
+                ship.cargo.get(trade_good=trade_good).units
+            )
+            messages.success(request, f'{market_transaction}')
+            return redirect('fleet:inventory', pk=ship.symbol)
+        
+        if request.POST.get('deliver_cargo'):
+            # TODO make a proper form class for this
+            ship = Ship.objects.get(symbol=request.POST.get("ship_symbol"))
+            trade_good_symbol = request.POST.get("trade_good")
+            trade_good = TradeGood.objects.get(symbol=trade_good_symbol)
+            contract_id = Contract.objects.get(pk=request.POST.get("contract")).pk
+            print(f'Delivering {trade_good} from {ship} at {ship.nav.waypoint}...')
+            api = SpaceTradersAPI(request.user.token)
+            contract = api.contract_deliver_cargo(
+                contract_id,
+                ship.symbol,
+                trade_good_symbol,
+                ship.cargo.get(trade_good=trade_good).units
+            )
+            messages.success(request, f'{contract}')
+            return redirect('fleet:inventory', pk=ship.symbol)
+        
+        if request.POST.get('jettison_cargo'):
+            ship = Ship.objects.get(symbol=request.POST.get("ship_symbol"))
+            trade_good_symbol = request.POST.get("trade_good")
+            trade_good = TradeGood.objects.get(symbol=trade_good_symbol)
+            print(f'Jettisoning {trade_good} from {ship} at {ship.nav.waypoint}...')
+            api = SpaceTradersAPI(request.user.token)
+            cargo = api.ship_jettison_cargo(
+                ship.symbol,
+                trade_good_symbol,
+                ship.cargo.get(trade_good=trade_good).units
+            )
+            return redirect('fleet:inventory', pk=ship.symbol)

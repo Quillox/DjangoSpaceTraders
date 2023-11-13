@@ -63,6 +63,8 @@ class WaypointDetailView(generic.DetailView):
             ship = Ship.objects.get(symbol=request.POST.get("ship_symbol"))
             print(f'Navigating {ship} to {waypoint.symbol}...')
             api = SpaceTradersAPI(request.user.token)
+            if ship.nav.status == 'DOCKED':
+                api.orbit_ship(ship.symbol)
             ship_nav = api.navigate_ship(ship.symbol, waypoint.symbol)
             return redirect('fleet:nav', pk=ship_nav.ship.symbol)
         
@@ -107,14 +109,6 @@ class MarketDetailView(generic.DetailView):
                 market = SpaceTradersAPI.get_add_market_no_token(request.POST.get('market_symbol'))
             messages.success(request, f'Market {market} successfully updated!')
             return redirect('systems:market_detail', system_symbol=market.waypoint.system.symbol, pk=market.pk)
-        
-        if request.POST.get('ship_sell_cargo'):
-            ship = Ship.objects.get(symbol=request.POST.get("ship_symbol"))
-            print(f'Selling {request.POST.get("units")} {request.POST.get("trade_good")} from {ship} at {self.get_object()}...')
-            api = SpaceTradersAPI(request.user.token)
-            market_transaction = api.sell_ship_cargo(ship.symbol, request.POST.get("trade_good"), request.POST.get("units"))
-            messages.success(request, f'{market_transaction}')
-            return redirect('fleet:detail', pk=ship.symbol)
 
         return super().get(request, *args, **kwargs)
 

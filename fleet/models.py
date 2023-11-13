@@ -645,6 +645,7 @@ class ShipCargoInventory(models.Model):
     ship = models.ForeignKey(
         Ship,
         on_delete=models.CASCADE,
+        related_name='cargo'
     )
     trade_good = models.ForeignKey(
          TradeGood,
@@ -892,6 +893,8 @@ class Shipyard(models.Model):
         verbose_name="the fee to modify a ship at this shipyard. This includes installing or removing modules and mounts on a ship. In the case of mounts, the fee is a flat rate per mount. In the case of modules, the fee is per slot the module occupies."
     )
 
+    def __str__(self):
+        return f'Shipyard at {self.waypoint}'
     @classmethod
     def add(cls, shipyard_data, waypoint):
         if not shipyard_data.get('modificationsFee'):

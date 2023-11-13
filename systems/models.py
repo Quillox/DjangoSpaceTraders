@@ -423,7 +423,7 @@ class Waypoint(models.Model):
     )
 
     def __str__(self) -> str:
-        ans = f'{self.symbol} - {self.waypoint_type}'
+        ans = f'{self.symbol} - {self.waypoint_type} ({self.x}, {self.y})'
         return ans
 
     @classmethod
@@ -898,7 +898,7 @@ class MarketTransaction(models.Model):
         on_delete=models.CASCADE,
         related_name='transactions'
     )
-    ship_symbol = models.ForeignKey(
+    ship = models.ForeignKey(
         'fleet.Ship',
         on_delete=models.CASCADE,
         related_name='market_transactions'
@@ -931,7 +931,7 @@ class MarketTransaction(models.Model):
     def add(cls, transactions_data, market, ship, trade_good):
         market_transaction, created = cls.objects.update_or_create(
             market=market,
-            ship_symbol=ship,
+            ship=ship,
             trade_good=trade_good,
             transaction_type=transactions_data['type'],
             units=transactions_data['units'],
@@ -940,7 +940,7 @@ class MarketTransaction(models.Model):
             timestamp=transactions_data['timestamp'],
             defaults={
                 'market': market,
-                'ship_symbol': ship,
+                'ship': ship,
                 'trade_good': trade_good,
                 'transaction_type': transactions_data['type'],
                 'units': transactions_data['units'],
