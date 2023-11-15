@@ -30,6 +30,32 @@ class DetailView(generic.DetailView):
     model = Ship
     template_name = 'fleet/detail.html'
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['contracts'] = context['ship'].agent.contracts.all()
+        context['market'] = context['ship'].nav.waypoint.market if context['ship'].nav.status == 'DOCKED' else None
+        context['waypoint'] = context['ship'].nav.waypoint if context['ship'].nav.status in ['DOCKED', 'IN_ORBIT'] else None
+        return context
+    
+    def post(self, request, *args, **kwargs):
+        waypoint = self.get_object().nav.waypoint if self.get_object().nav.status in ['DOCKED', 'IN_ORBIT'] else None
+        if request.POST.get('update'):
+            print(f'Updating {self.get_object()}...')
+            api = SpaceTradersAPI(request.user.token)
+            ship = api.get_add_ship(self.get_object().symbol)
+            return redirect('fleet:detail', pk=ship.symbol)
+        
+        if request.POST.get('survey'):
+            print(f'Surveying {waypoint} with {self.get_object()}...')
+            api = SpaceTradersAPI(request.user.token)
+            cooldown, survey = api.ship_survey(self.get_object().symbol)
+            messages.success(request, f'Surveyed {waypoint} with {self.get_object()}!')
+            for survey in waypoint.surveys.all():
+                if survey.is_valid():
+                    messages.info(request, f'Surveys: {survey}')
+            messages.info(request, f'Cooldown: {cooldown}')
+            return redirect('fleet:detail', pk=self.get_object().symbol)
+
 
 class NavView(generic.DetailView):
     model = ShipNav
@@ -47,6 +73,14 @@ class NavView(generic.DetailView):
             api = SpaceTradersAPI(request.user.token)
             ship_nav = api.dock_ship(self.get_object().ship.symbol)
             return redirect('fleet:nav', pk=ship_nav.ship.symbol)
+        
+        if request.POST.get('update'):
+            print(f'Updating nav for {self.get_object()}...')
+            api = SpaceTradersAPI(request.user.token)
+            ship = api.get_add_ship(self.get_object().ship.symbol)
+            return redirect('fleet:nav', pk=ship.symbol)
+        
+        return super().get(request, *args, **kwargs)
         
         
 class InventoryView(generic.ListView):
@@ -82,6 +116,20 @@ class InventoryView(generic.ListView):
                 ship.symbol,
                 trade_good_symbol,
                 ship.cargo.get(trade_good=trade_good).units
+            )
+            messages.success(request, f'{market_transaction}')
+            return redirect('fleet:inventory', pk=ship.symbol)
+        
+        if request.POST.get('purchase_cargo'):
+            ship = Ship.objects.get(symbol=request.POST.get("ship_symbol"))
+            trade_good_symbol = request.POST.get("trade_good")
+            trade_good = TradeGood.objects.get(symbol=trade_good_symbol)
+            print(f'Purchasing {trade_good} from {ship} at {ship.nav.waypoint.market}...')
+            api = SpaceTradersAPI(request.user.token)
+            market_transaction = api.purchase_ship_cargo(
+                ship.symbol,
+                trade_good_symbol,
+                request.POST.get("units")
             )
             messages.success(request, f'{market_transaction}')
             return redirect('fleet:inventory', pk=ship.symbol)

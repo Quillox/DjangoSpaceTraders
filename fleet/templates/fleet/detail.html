@@ -68,4 +68,14 @@
 <h3>Ship Inventory</h3>
 <a href="{% url 'fleet:inventory' ship.symbol %}">Ship Inventory</a>
 
+<h3>Survey Current Waypoint</h3>
+
+<form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="survey" value="true">
+    <input type="hidden" name="ship_symbol" value="{{ ship.symbol }}">
+    <label for="survey">Survey:</label>
+    <input type="submit" value="Survey">
+</form>
+
 {% endblock %}

@@ -100,6 +100,25 @@
     <input type="submit" value="Extract">
 </form>
 
+<form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="extract_with_survey" value="true">
+    <label for="fleet">Extract Ore with Survey:</label>
+    <select name="ship_symbol" id="ship_symbol">
+        {% for ship in orbiting_ships %}
+        <option value="{{ ship.symbol }}">{{ ship.symbol }}</option>
+        {% endfor %}
+    </select>
+    <select name="survey_signature" id="survey_signature">
+        {% for survey in surveys.all %}
+        {% if survey.is_valid %}
+        <option value="{{ survey.signature }}">{{ survey }}</option>
+        {% endif %}
+        {% endfor %}
+    </select>
+    <input type="submit" value="Extract">
+</form>
+
 {% endif %}
 
 

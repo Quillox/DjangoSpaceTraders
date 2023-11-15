@@ -5,7 +5,7 @@ from factions.models import Faction, FACTION_SYMBOLS
 from systems.models import MarketTransaction, System, TradeGood, Waypoint, Chart, Market, JumpGate, ConstructionSite
 from agents.models import Agent
 from contracts.models import Contract
-from fleet.models import Ship, ShipRegistration, ShipNav, ShipNavRoute, ShipCrew, Frame, Reactor, Engine, Module, Mount, Shipyard, ShipyardTransaction, FuelConsumedLog, Cooldown, ShipCargoInventory
+from fleet.models import Ship, ShipRegistration, ShipNav, ShipNavRoute, ShipCrew, Frame, Reactor, Engine, Module, Mount, Shipyard, ShipyardTransaction, FuelConsumedLog, Cooldown, ShipCargoInventory, Survey, Deposit
 from player.models import Player
 
 
@@ -529,8 +529,12 @@ class SpaceTradersAPI:
         )
         return market_transaction
     
-    def ship_extract_resources(self, ship_symbol):
-        extraction_data = self.post_token(f'my/ships/{ship_symbol}/extract')['data']
+    def ship_extract_resources(self, ship_symbol, survey_signature=None):
+        if survey_signature:
+            payload = Survey.objects.get(pk=survey_signature).get_json()
+            extraction_data = self.post_token(f'my/ships/{ship_symbol}/extract', payload)['data']
+        else:
+            extraction_data = self.post_token(f'my/ships/{ship_symbol}/extract')['data']
         ship = Ship.objects.get(pk=ship_symbol)
         ship.cargo_capacity = extraction_data['cargo']['capacity']
         ship.cargo_units = extraction_data['cargo']['units']
@@ -550,6 +554,40 @@ class SpaceTradersAPI:
         ship.save()
         ship_cargo_inventory = ShipCargoInventory.add(response_data['cargo']['inventory'], ship)
         return ship_cargo_inventory
+    
+    def purchase_ship_cargo(self, ship_symbol, trade_good_symbol, units):
+        payload = {
+            'symbol': trade_good_symbol,
+            'units': units
+        }
+        response_data = self.post_token(f'my/ships/{ship_symbol}/purchase', payload)['data']
+        ship = Ship.objects.get(pk=ship_symbol)
+        ship.cargo_capacity = response_data['cargo']['capacity']
+        ship.cargo_units = response_data['cargo']['units']
+        ship.save()
+        ship_cargo_inventory = ShipCargoInventory.add(response_data['cargo']['inventory'], ship)
+        market_transaction = MarketTransaction.add(
+            response_data['transaction'],
+            Market.objects.get(pk=response_data['transaction']['waypointSymbol']),
+            ship,
+            TradeGood.objects.get(symbol=response_data['transaction']['tradeSymbol'])
+        )
+        return market_transaction
+
+    def ship_survey(self, ship_symbol):
+        response_data = self.post_token(f'my/ships/{ship_symbol}/survey')['data']
+        cooldown = Cooldown.add(response_data['cooldown'], Ship.objects.get(pk=ship_symbol))
+        for survey_data in response_data['surveys']:
+            survey = Survey.add(
+                survey_data,
+                Waypoint.objects.get(symbol=survey_data['symbol'])
+            )
+            for deposit_data in survey_data['deposits']:
+                trade_good = TradeGood.objects.get(symbol=deposit_data['symbol'])
+                deposit = Deposit.add(survey, trade_good)
+        return cooldown, survey
+    
+
 
     @classmethod
     def populate_factions(cls):

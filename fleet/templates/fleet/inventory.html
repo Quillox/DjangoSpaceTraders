@@ -52,10 +52,32 @@
     <label for="trade_good">Trade Good:</label>
     <select name="trade_good" id="trade_good">
         {% for cargo in ship.cargo.all %}
+        {% for link in market.markettradegoodlink_set.all %}
+        {% if link.trade_good == cargo.trade_good and link.trade_type == 'IMPORT' %}
         <option value="{{ cargo.trade_good.symbol }}">{{ cargo.trade_good }}</option>
+        {% endif %}
+        {% endfor %}
         {% endfor %}
     </select>
     <input type="submit" value="Sell All">
+</form>
+
+<h3>Purchase Cargo</h3>
+<form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="purchase_cargo" value="true">
+    <input type="hidden" name="ship_symbol" value="{{ ship.symbol }}">
+    <label for="trade_good">Trade Good:</label>
+    <select name="trade_good" id="trade_good">
+        {% for link in market.markettradegoodlink_set.all %}
+        {% if link.trade_type == 'EXPORT' %}
+        <option value="{{ link.trade_good.symbol }}">{{ link }}</option>
+        {% endif %}
+        {% endfor %}
+    </select>
+    <label for="units">Units:</label>
+    <input type="number" name="units" id="units">
+    <input type="submit" value="Purchase">
 </form>
 {% endif %}
 

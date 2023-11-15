@@ -891,7 +891,13 @@ class MarketTradeGoodLink(models.Model):
         )
         return market_trade_good_link
 
-
+    def __str__(self) -> str:
+        out = f'{self.trade_good}: '
+        if self.trade_type == 'EXPORT':
+            out += f'sell price: {self.sell_price}, '
+        elif self.trade_type == 'IMPORT':
+            out += f'purchase price: {self.purchase_price}, '
+        return out + f'volume: {self.volume}, supply: {self.supply}, activity: {self.activity}'
 class MarketTransaction(models.Model):
     market = models.ForeignKey(
         Market,

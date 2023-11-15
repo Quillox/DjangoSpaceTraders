@@ -1,6 +1,7 @@
 from typing import List
 from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
+from django.utils import timezone
 
 from systems.models import TradeGood, MARKET_SUPPLY, MARKET_ACTIVITY
 
@@ -148,6 +149,11 @@ SHIP_TYPE = [
     ('SHIP_SURVEYOR', 'Ship Surveyor')
 ]
 
+DEPOSIT_SIZE = [
+    ('SMALL', 'Small'),
+    ('MODERATE', 'Moderate'),
+    ('LARGE', 'Large')
+]
 
 # TODO ctrl+F waypoint and system and replace with ForeignKey to Waypoint and System
 
@@ -1009,3 +1015,84 @@ class ShipyardTransaction(models.Model):
             }
         )
         return shipyard_transaction
+
+
+class Survey(models.Model):
+    signature = models.CharField(
+        max_length=255,
+        primary_key=True,
+        verbose_name="the unique signature for the location of this survey. This signature is verified when attempting an extraction using this survey."
+        )
+    symbol = models.ForeignKey(
+        'systems.Waypoint',
+        on_delete=models.CASCADE,
+        related_name='surveys'
+    )
+    expiration = models.DateTimeField()
+    size = models.CharField(
+        max_length=255,
+        choices=DEPOSIT_SIZE
+    )
+
+    @classmethod
+    def add(cls, survey_data, waypoint):
+        survey, created = cls.objects.update_or_create(
+            signature=survey_data['signature'],
+            defaults={
+                'signature': survey_data['signature'],
+                'symbol': waypoint,
+                'expiration': survey_data['expiration'],
+                'size': survey_data['size']
+            }
+        )
+        return survey
+    
+    def get_json(self):
+        return {
+            'signature': self.signature,
+            'symbol': self.symbol.symbol,
+            'deposits': [{'symbol': deposit.symbol.symbol} for deposit in self.deposits.all()],
+            'expiration': self.expiration.isoformat(),
+            'size': self.size
+        }
+    
+    def is_valid(self):
+        return self.expiration > timezone.now()
+    
+    def get_deposits_counts(self):
+        counts = {}
+        for deposit in self.deposits.all():
+            if deposit.symbol.symbol in counts:
+                counts[deposit.symbol.symbol] += 1
+            else:
+                counts[deposit.symbol.symbol] = 1
+        return counts
+    
+    def __str__(self):
+        return f'{self.size}: {self.get_deposits_counts()}'
+
+
+class Deposit(models.Model):
+    survey = models.ForeignKey(
+        Survey,
+        on_delete=models.CASCADE,
+        related_name='deposits'
+    )
+    symbol = models.ForeignKey(
+        'systems.TradeGood',
+        on_delete=models.CASCADE,
+        related_name='deposits'
+    )
+
+    @classmethod
+    def add(cls, survey, trade_good):
+        deposit, created = cls.objects.update_or_create(
+            survey=survey,
+            symbol=trade_good,
+            defaults={
+                'survey': survey,
+                'symbol': trade_good
+            }
+        )
+        return deposit
+

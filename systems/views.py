@@ -48,6 +48,7 @@ class WaypointDetailView(generic.DetailView):
         context['fleet'] = Ship.objects.filter(agent=self.request.user.agent.pk).all()
         context['docked_ships'] = [ship for ship in context['fleet'] if ship.nav.waypoint.symbol == self.get_object().symbol and ship.nav.status == 'DOCKED']
         context['orbiting_ships'] = [ship for ship in context['fleet'] if ship.nav.waypoint.symbol == self.get_object().symbol and ship.nav.status == 'IN_ORBIT']
+        context['surveys'] = self.get_object().surveys
         return context
 
     def post(self, request, *args, **kwargs):
@@ -85,6 +86,17 @@ class WaypointDetailView(generic.DetailView):
             messages.success(request, f'{ship} current inventory:')
             for item in inventory:
                 print(item)
+                messages.success(request, f'\t{item.units} {item.trade_good}')
+            return redirect('systems:waypoint_detail', system_symbol=waypoint.system.symbol, pk=waypoint.pk)
+        
+        if request.POST.get('extract_with_survey'):
+            ship = Ship.objects.get(symbol=request.POST.get("ship_symbol"))
+            print(f'{ship} is extracting at {waypoint.symbol} with {request.POST.get("survey_signature")}...')
+            api = SpaceTradersAPI(request.user.token)
+            cooldown, inventory = api.ship_extract_resources(ship.symbol, survey_signature=request.POST.get("survey_signature"))
+            messages.success(request, f'{ship} is on cooldown for {cooldown.remaining_seconds} s')
+            messages.success(request, f'{ship} current inventory:')
+            for item in inventory:
                 messages.success(request, f'\t{item.units} {item.trade_good}')
             return redirect('systems:waypoint_detail', system_symbol=waypoint.system.symbol, pk=waypoint.pk)
 

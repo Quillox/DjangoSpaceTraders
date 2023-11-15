@@ -14,7 +14,7 @@ class IndexView(generic.ListView):
     context_object_name = 'contract_list'
 
     def get_queryset(self):
-        return Contract.objects.all().order_by('accepted', 'deadline_to_accept')
+        return Contract.objects.filter(agent=self.request.user.agent.pk).all()
 
 
 class DetailView(generic.DetailView):

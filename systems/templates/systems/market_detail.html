@@ -42,6 +42,35 @@
     <input type="submit" value="Update">
 </form>
 
+<h3>Trade Goods</h3>
+
+<table>
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Volume</th>
+            <th>Supply</th>
+            <th>Activity</th>
+            <th>Purchase Price</th>
+            <th>Sell Price</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for link in market.markettradegoodlink_set.all %}
+        <tr>
+            <td>{{ link.trade_good}}</td>
+            <td>{{ link.trade_type }}</td>
+            <td>{{ link.volume }}</td>
+            <td>{{ link.supply }}</td>
+            <td>{{ link.activity }}</td>
+            <td>{{ link.purchase_price }}</td>
+            <td>{{ link.sell_price }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
 <h3>Recent Transactions</h3>
 <table>
     <thead>

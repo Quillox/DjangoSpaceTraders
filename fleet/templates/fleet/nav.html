@@ -41,6 +41,13 @@
     </tbody>
 </table>
 
+<form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="update" value="true">
+    <label for="update_shipnav">Update Ship Nav:</label>
+    <input type="submit" value="Update">
+</form>
+
 {% if shipnav.status == 'DOCKED' %}
 <form method="post">
     {% csrf_token %}
