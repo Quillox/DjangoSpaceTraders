@@ -3,7 +3,7 @@ from django.views import generic
 from django.contrib import messages
 from django.shortcuts import redirect, get_object_or_404
 
-from .models import Ship, ShipNav, ShipCargoInventory
+from .models import Ship, ShipNav, ShipCargoInventory, SHIP_FLIGHT_MODE
 from player.api import SpaceTradersAPI
 from systems.models import Waypoint, Market, TradeGood
 from contracts.models import Contract
@@ -61,6 +61,11 @@ class NavView(generic.DetailView):
     model = ShipNav
     template_name = 'fleet/nav.html'
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['flight_modes'] = [(mode[0], mode[1]) for mode in SHIP_FLIGHT_MODE]
+        return context
+
     def post(self, request, *args, **kwargs):
         if request.POST.get('orbit'):
             print(f'Orbiting {self.get_object()}...')
@@ -79,6 +84,16 @@ class NavView(generic.DetailView):
             api = SpaceTradersAPI(request.user.token)
             ship = api.get_add_ship(self.get_object().ship.symbol)
             return redirect('fleet:nav', pk=ship.symbol)
+        
+        if request.POST.get('patch_ship_nav'):
+            print(f'Patching nav for {self.get_object()}...')
+            flight_mode = request.POST.get('flight_mode')
+            if flight_mode not in [mode[0] for mode in SHIP_FLIGHT_MODE]:
+                messages.error(request, f'Invalid flight mode: {flight_mode}')
+                return redirect('fleet:nav', pk=self.get_object().ship.symbol)
+            api = SpaceTradersAPI(request.user.token)
+            ship_nav = api.patch_ship_nav(self.get_object().ship.symbol, flight_mode)
+            return redirect('fleet:nav', pk=ship_nav.ship.symbol)
         
         return super().get(request, *args, **kwargs)
         

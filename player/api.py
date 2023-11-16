@@ -64,6 +64,21 @@ class SpaceTradersAPI:
             print(response.text)
             return None
 
+    def patch_token(self, endpoint, payload=None):
+        headers = {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "Authorization": f"Bearer {self.api_token}"
+        }
+        response = requests.patch(
+            f'{self.base_url}/{endpoint}', headers=headers, json=payload)
+        if response.status_code == 200:
+            return response.json()
+        else:
+            print(response.status_code)
+            print(response.text)
+            return None
+
     @classmethod
     def get_no_token(cls, endpoint):
         headers = {"Accept": "application/json"}
@@ -398,7 +413,7 @@ class SpaceTradersAPI:
             'units': units
         }
         response_data = self.post_token(f'my/contracts/{contract_id}/deliver', payload)['data']
-        ship = Ship.objects.get(ship_symbol)
+        ship = Ship.objects.get(symbol=ship_symbol)
         ship.cargo_capacity = response_data['cargo']['capacity']
         ship.cargo_units = response_data['cargo']['units']
         ship.save()
@@ -408,6 +423,21 @@ class SpaceTradersAPI:
             self.agent,
             Faction.objects.get(symbol=response_data['contract']['factionSymbol'])
         )   
+        return contract
+
+    def fulfill_contract(self, contract_id):
+        """Fulfill a contract. Can only be used on contracts that have all of their delivery terms fulfilled."""
+        response_data = self.post_token(f'my/contracts/{contract_id}/fulfill')['data']
+        agent = self.agent.add(
+            response_data['agent'],
+            Waypoint.objects.get(symbol=response_data['agent']['headquarters']),
+            Faction.objects.get(symbol=response_data['agent']['startingFaction'])
+        )
+        contract = Contract.add(
+            response_data['contract'],
+            self.agent,
+            Faction.objects.get(symbol=response_data['contract']['factionSymbol'])
+        )
         return contract
 
     @classmethod
@@ -587,7 +617,18 @@ class SpaceTradersAPI:
                 deposit = Deposit.add(survey, trade_good)
         return cooldown, survey
     
-
+    def patch_ship_nav(self, ship_symbol, flight_mode):
+        payload = {
+            'flightMode': flight_mode
+        }
+        response_data = self.patch_token(f'my/ships/{ship_symbol}/nav', payload)['data']
+        ship_nav = ShipNav.add(
+            response_data,
+            Ship.objects.get(pk=ship_symbol),
+            System.objects.get(symbol=response_data['systemSymbol']),
+            Waypoint.objects.get(symbol=response_data['waypointSymbol'])
+        )
+        return ship_nav
 
     @classmethod
     def populate_factions(cls):

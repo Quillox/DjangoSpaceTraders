@@ -7,6 +7,7 @@ from player.api import SpaceTradersAPI
 from factions.models import Faction
 from agents.models import Agent
 from systems.models import Waypoint
+from django.db.models import F
 
 
 class IndexView(generic.ListView):
@@ -41,5 +42,16 @@ class DetailView(generic.DetailView):
             api = SpaceTradersAPI(request.user.token)
             contract = api.get_add_contract(request.POST.get('contract_id'))
             messages.success(request, f'Contract {contract} successfully updated!')
+            return redirect('contracts:detail', pk=contract.pk)
+        elif request.POST.get('fulfill'):
+            contract = self.get_object()
+            unfulfilled_deliveries = contract.terms.deliveries.filter(units_fulfilled__lt=F('units_required'))
+            if unfulfilled_deliveries.exists():
+                messages.error(request, f'Contract {contract} cannot be fulfilled. Not all deliveries have been fulfilled.')
+                return redirect('contracts:detail', pk=contract.pk)
+            print(f'Fulfilling contract {request.POST.get("contract_id")}...')
+            api = SpaceTradersAPI(request.user.token)
+            contract = api.fulfill_contract(request.POST.get('contract_id'))
+            messages.success(request, f'Contract {contract} successfully fulfilled!')
             return redirect('contracts:detail', pk=contract.pk)
         return super().get(request, *args, **kwargs)

@@ -738,7 +738,6 @@ class Market(models.Model):
                 trade_good = TradeGood.add(trade_good_data)
                 MarketImportLink.add(market, trade_good)
         for trade_good_data in market_data.get('exchange', []):
-            print("heeey", trade_good_data)
             if trade_good_data:
                 trade_good = TradeGood.add(trade_good_data)
                 MarketExchangeLink.add(market, trade_good)

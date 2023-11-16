@@ -41,7 +41,9 @@
         <td>
             {% for delivery in contract.terms.deliveries.all %}
             Trade Good: {{ delivery.trade_good.symbol }}<br>
-            Destination: <a href="{% url 'systems:waypoint_detail' system_symbol=delivery.destination.system.pk pk=delivery.destination.pk %}">{{ delivery.destination }}</a><br>
+            Destination: <a
+                href="{% url 'systems:waypoint_detail' system_symbol=delivery.destination.system.pk pk=delivery.destination.pk %}">{{
+                delivery.destination }}</a><br>
             Units Required: {{ delivery.units_required }}<br>
             Units Fulfilled: {{ delivery.units_fulfilled }}<br>
             {% endfor %}
@@ -50,26 +52,30 @@
 </table>
 
 
-<div>
-    {% if contract.accepted is False %}
-    <form method="post">
-        {% csrf_token %}
-        <input type="hidden" name="accept" value="true">
-        <input type="hidden" name="contract_id" value="{{ contract.pk }}">
-        <label for="accept">Accept Contract:</label>
-        <input type="submit" value="Accept">
-    </form>
-    {% endif %}
-</div>
+{% if contract.accepted is False %}
+<form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="accept" value="true">
+    <input type="hidden" name="contract_id" value="{{ contract.pk }}">
+    <label for="accept">Accept Contract:</label>
+    <input type="submit" value="Accept">
+</form>
+{% endif %}
 
-<div>
-    <form method="post">
-        {% csrf_token %}
-        <input type="hidden" name="update" value="true">
-        <input type="hidden" name="contract_id" value="{{ contract.pk }}">
-        <label for="update">Update Contract:</label>
-        <input type="submit" value="Update">
-    </form>
-</div>
+<form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="update" value="true">
+    <input type="hidden" name="contract_id" value="{{ contract.pk }}">
+    <label for="update">Update Contract:</label>
+    <input type="submit" value="Update">
+</form>
+
+<form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="fulfill" value="true">
+    <input type="hidden" name="contract_id" value="{{ contract.pk }}">
+    <label for="fulfill">Fulfill Contract:</label>
+    <input type="submit" value="Fulfill">
+</form>
 
 {% endblock %}

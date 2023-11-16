@@ -48,6 +48,18 @@
     <input type="submit" value="Update">
 </form>
 
+<form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="patch_ship_nav" value="true">
+    <label for="flight_mode">Flight Mode:</label>
+    <select name="flight_mode">
+        {% for value, display in flight_modes %}
+            <option value="{{ value }}">{{ display }}</option>
+        {% endfor %}
+    </select>
+    <input type="submit" value="Patch">
+</form>
+
 {% if shipnav.status == 'DOCKED' %}
 <form method="post">
     {% csrf_token %}
@@ -65,5 +77,6 @@
     <input type="submit" value="Dock">
 </form>
 {% endif %}
+
 
 {% endblock %}

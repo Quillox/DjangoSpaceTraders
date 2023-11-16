@@ -70,7 +70,7 @@
     <label for="trade_good">Trade Good:</label>
     <select name="trade_good" id="trade_good">
         {% for link in market.markettradegoodlink_set.all %}
-        {% if link.trade_type == 'EXPORT' %}
+        {% if link.trade_type in 'EXPORT,EXCHANGE' %}
         <option value="{{ link.trade_good.symbol }}">{{ link }}</option>
         {% endif %}
         {% endfor %}
