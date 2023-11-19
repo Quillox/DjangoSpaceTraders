@@ -7,6 +7,7 @@ from django.views import generic
 from .api import SpaceTradersAPI
 
 from .models import Player
+from .forms import RegisterAgentForm
 from systems.models import Market, ConstructionSite, JumpGate
 from fleet.models import Shipyard
 
@@ -41,7 +42,7 @@ class HomeView(generic.ListView):
             messages.success(request, f'Updated {len(contracts)} contracts!')
             return redirect('contracts:index')
         return super().get(request, *args, **kwargs)
-    
+
 
 class MarketIndexView(generic.ListView):
     template_name = 'player/market_index.html'
@@ -50,13 +51,15 @@ class MarketIndexView(generic.ListView):
     def get_queryset(self):
         return Market.objects.all().order_by('pk')
 
+
 class ConstructionSiteIndexView(generic.ListView):
     template_name = 'player/construction_site_index.html'
     context_object_name = 'construction_site_list'
 
     def get_queryset(self):
         return ConstructionSite.objects.all().order_by('pk')
-    
+
+
 class JumpGateIndexView(generic.ListView):
     template_name = 'player/jump_gate_index.html'
     context_object_name = 'jump_gate_list'

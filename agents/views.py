@@ -7,7 +7,7 @@ from django.views.generic.edit import FormView
 from django.contrib.auth.mixins import LoginRequiredMixin
 
 from .models import Agent
-from .forms import TokenForm
+from .forms import TokenForm, RegisterAgentForm
 from player.api import SpaceTradersAPI
 
 class EnterTokenView(LoginRequiredMixin, FormView):
@@ -42,6 +42,30 @@ class EnterTokenView(LoginRequiredMixin, FormView):
             messages.success(request, f'Agent {agent.symbol} successfully added to the database!')
             return redirect(self.get_success_url())
         return super().get(request, *args, **kwargs)
+
+
+class RegisterAgentView(LoginRequiredMixin, FormView):
+    template_name = 'agents/register_agent.html'
+    form_class = RegisterAgentForm
+
+    def get_success_url(self):
+        return reverse('player:home')
+
+    def form_valid(self, form):
+        messages.info(self.request, 'Adding your agent to the database...')
+        api = SpaceTradersAPI(self.request.user.token)
+        agent = api.get_add_my_agent()
+        self.request.user.agent = agent
+        self.request.user.save()
+        messages.success(self.request, f'Agent {agent.symbol} successfully added to the database and linked with account {self.request.user.username}!')
+        return super().form_valid(form)
+
+    def get(self, request, *args, **kwargs):
+        if request.user.token is None or not SpaceTradersAPI.validate_token(request.user.token):
+            messages.error(request, 'You must enter a valid SpaceTraders API token before registering an agent!')
+            return redirect('agents:enter_token')
+        return super().get(request, *args, **kwargs)
+
 
 class IndexView(generic.ListView):
     template_name = 'agents/index.html'

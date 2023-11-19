@@ -78,6 +78,21 @@ class SpaceTradersAPI:
             print(response.status_code)
             print(response.text)
             return None
+    
+    @classmethod
+    def post_no_token(cls, endpoint, payload=None):
+        headers = {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+        }
+        response = requests.post(
+            f'{cls.base_url}/{endpoint}', headers=headers, json=payload)
+        if response.status_code in [200, 201]:
+            return response.json()
+        else:
+            print(response.status_code)
+            print(response.text)
+            return None
 
     @classmethod
     def get_no_token(cls, endpoint):
@@ -105,6 +120,35 @@ class SpaceTradersAPI:
             else:
                 print('Valid API token!')
                 return True
+
+    @classmethod
+    def get_root(cls):
+        """
+        Keys of the response dictionary:
+        - "status",
+        - "version",
+        - "resetDate",
+        - "description",
+        - "stats",
+        - "leaderboards",
+        - "serverResets",
+        - "announcements",
+        - "links"
+        """
+        response = cls.get_no_token('')
+        return response
+
+    @classmethod
+    def register(cls, agent_symbol, faction_symbol):
+        payload = {
+            "symbol": agent_symbol,
+            "faction": faction_symbol
+        }
+        response = cls.post_no_token('users/{username}/token', payload)
+        if response:
+            return response['token']
+        else:
+            return None
 
     @classmethod
     def get_add_system(cls, system_symbol, add_jump_gates=False):
